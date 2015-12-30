@@ -280,7 +280,19 @@ ifeq ($(CONFIG_USE_OF),y)
 KBUILD_DTBS := dtbs
 endif
 
+ifeq ($(CONFIG_TINNO_L5221),y) 
+DTSSUBDIR := L5221
+else 
+ifeq ($(CONFIG_TINNO_L5251),y) 
+DTSSUBDIR := L5251
+else 
+ifeq ($(CONFIG_TINNO_V3901),y) 
+DTSSUBDIR := V3901
+else 
 DTSSUBDIR := qcom
+endif
+endif
+endif
 
 all:	$(KBUILD_IMAGE) $(KBUILD_DTBS)
 

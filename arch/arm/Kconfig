@@ -2381,3 +2381,13 @@ source "crypto/Kconfig"
 source "lib/Kconfig"
 
 source "arch/arm/kvm/Kconfig"
+
+config TINNO_L5221
+bool "for tinno product L5221 dts build"
+default n
+config TINNO_L5251
+bool "for tinno product L5251 dts build"
+default n
+config TINNO_V3901
+bool "for tinno product V3901 dts build"
+default n
