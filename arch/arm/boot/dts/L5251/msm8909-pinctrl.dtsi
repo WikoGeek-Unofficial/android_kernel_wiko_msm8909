@@ -1381,5 +1381,18 @@
 					 bias-disable;
 			};
 		};
+//yajun add button led
+		button_backlight_pin {
+		qcom,pins = <&gp 14>;
+		qcom,num-grp-pins = <1>;
+		qcom,pin-func = <0>;
+		label = "button-backlight-pin";
+		button_backlight_off: button_backlight_off {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	     };
+
 	};
 };

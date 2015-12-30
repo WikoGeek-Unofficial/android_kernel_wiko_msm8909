@@ -40,6 +40,12 @@
 };
 
 &sdhc_2 {
+	qcom,nonhotplug;                     //yajun    sd card1
+	interrupts = <0 1>;
+	interrupt-map = <0 &intc 0 125 0
+		1 &intc 0 221 0>;
+	interrupt-names = "hc_irq", "pwr_irq";
+	/delete-property/ cd-gpios;
 	vdd-supply = <&pm8916_l11>;
 	vdd-io-supply = <&pm8916_l12>;
 };
@@ -92,22 +98,11 @@
 	};
 };
 
-&dsi_auo_qvga_cmd {
-        qcom,mdss-dsi-pwm-gpio = <&pm8916_mpps 4 0>;
-};
-
-&dsi_auo_cx_qvga_cmd {
-	qcom,mdss-dsi-pwm-gpio = <&pm8916_mpps 4 0>;
-};
-&dsi_hx8394d_480_vid {
+&dsi_otm8019a_fwvga_video {
 	qcom,mdss-dsi-pwm-gpio = <&pm8916_mpps 4 0>;
 };
 
-&dsi_hx8394d_720_vid {
-	qcom,mdss-dsi-pwm-gpio = <&pm8916_mpps 4 0>;
-};
-
-&dsi_hx8394d_qhd_vid {
+&dsi_ili9806e_fwvga_video {
 	qcom,mdss-dsi-pwm-gpio = <&pm8916_mpps 4 0>;
 };
 
