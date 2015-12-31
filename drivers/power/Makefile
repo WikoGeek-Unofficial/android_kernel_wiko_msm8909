@@ -1,5 +1,9 @@
 ccflags-$(CONFIG_POWER_SUPPLY_DEBUG) := -DDEBUG
 
+ifeq ($(strip $(BATTERY_PARAMETER)),vk_bat)
+ccflags-y += -DCONFIG_TINNO_BATTERY_VK
+endif
+
 power_supply-y				:= power_supply_core.o
 power_supply-$(CONFIG_SYSFS)		+= power_supply_sysfs.o
 power_supply-$(CONFIG_LEDS_TRIGGERS)	+= power_supply_leds.o
@@ -59,7 +63,7 @@ obj-$(CONFIG_SMB358_CHARGER)	+= smb358-charger.o
 obj-$(CONFIG_BATTERY_BQ28400)	+= bq28400_battery.o
 obj-$(CONFIG_SMB137C_CHARGER)	+= smb137c-charger.o
 obj-$(CONFIG_QPNP_BMS)		+= qpnp-bms.o batterydata-lib.o
-obj-$(CONFIG_QPNP_VM_BMS)	+= qpnp-vm-bms.o batterydata-lib.o batterydata-interface.o
+obj-$(CONFIG_QPNP_VM_BMS)	+= qpnp-vm-bms.o batterydata-lib.o batterydata-interface.o tinno_sw_soc_calcute.o
 obj-$(CONFIG_QPNP_FG)		+= qpnp-fg.o
 obj-$(CONFIG_QPNP_CHARGER)	+= qpnp-charger.o
 obj-$(CONFIG_QPNP_LINEAR_CHARGER)	+= qpnp-linear-charger.o

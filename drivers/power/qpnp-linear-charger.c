@@ -26,6 +26,55 @@
 #include <linux/leds.h>
 #include <linux/debugfs.h>
 
+#include <linux/io.h>
+#include <linux/gpio.h>
+#include <linux/of_gpio.h>
+
+int chgr_getled_gpio;
+extern char *saved_command_line;
+#define CHARGER_MODE_BOOT   "androidboot.mode=charger"
+int chg_boot_flag=0;
+#ifdef CONFIG_TINNO_L5221 
+#define USE_GPIO_RED_LED
+#endif
+
+#ifdef CONFIG_TINNO_L5251
+#define TINNO_HIGH_VOLTAGE_BATTERY
+#define USE_GPIO_RED_LED
+extern int otg_vbus_state;
+extern int battype;
+const char battery_type_str[2][50]={"Li-polymer Battery","Li-ion Battery"};
+#endif
+
+#ifdef CONFIG_DEBUG_LL
+#define FAKE_TEMP_DEBUG
+#endif
+
+#ifdef FAKE_TEMP_DEBUG
+int tinno_fake_temp=0;
+#endif
+
+#ifdef TINNO_HIGH_VOLTAGE_BATTERY
+extern int get_last_vm_ocv(void);
+#endif
+
+#ifdef USE_GPIO_RED_LED
+int led_level=0;
+#endif
+
+//#define TINNO_DEBUG
+
+#if defined(TINNO_DEBUG)
+#ifndef pr_fmt
+#define pr_fmt(fmt) fmt
+#endif	
+#define tinno_pr_debug(fmt, ...) \
+	printk(KERN_DEBUG pr_fmt(fmt), ##__VA_ARGS__)
+#else
+#define tinno_pr_debug(fmt, ...) \
+	do{}while(0)
+#endif
+
 #define CREATE_MASK(NUM_BITS, POS) \
 	((unsigned char) (((1 << (NUM_BITS)) - 1) << (POS)))
 #define LBC_MASK(MSB_BIT, LSB_BIT) \
@@ -40,15 +89,8 @@
 
 /* USB CHARGER PATH peripheral register offsets */
 #define USB_IN_VALID_MASK			BIT(1)
-#define CHG_GONE_BIT				BIT(2)
 #define USB_SUSP_REG				0x47
 #define USB_SUSPEND_BIT				BIT(0)
-#define USB_COMP_OVR1_REG			0xEA
-#define USBIN_LLIMIT_OK_MASK			LBC_MASK(1, 0)
-#define USBIN_LLIMIT_OK_NO_OVERRIDE		0x00
-#define USBIN_LLIMIT_OK_OVERRIDE_1		0x03
-#define USB_OVP_TST5_REG			0xE7
-#define CHG_GONE_OK_EN_BIT			BIT(2)
 
 /* CHARGER peripheral register offset */
 #define CHG_OPTION_REG				0x08
@@ -78,8 +120,6 @@
 #define CHG_PERPH_RESET_CTRL3_REG		0xDA
 #define CHG_COMP_OVR1				0xEE
 #define CHG_VBAT_DET_OVR_MASK			LBC_MASK(1, 0)
-#define CHG_TEST_LOOP_REG			0xE5
-#define VIN_MIN_LOOP_DISABLE_BIT		BIT(0)
 #define OVERRIDE_0				0x2
 #define OVERRIDE_NONE				0x0
 
@@ -156,7 +196,6 @@ enum {
 	CURRENT = BIT(2),
 	SOC	= BIT(3),
 	PARALLEL = BIT(4),
-	COLLAPSE = BIT(5),
 };
 
 enum bpd_type {
@@ -210,6 +249,10 @@ static enum power_supply_property msm_batt_power_props[] = {
 	POWER_SUPPLY_PROP_COOL_TEMP,
 	POWER_SUPPLY_PROP_WARM_TEMP,
 	POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL,
+#ifdef CONFIG_TINNO_L5251	
+	POWER_SUPPLY_PROP_BATTERY_TYPE,
+#endif
+	
 };
 
 static char *pm_batt_supplied_to[] = {
@@ -282,7 +325,6 @@ struct vddtrim_map vddtrim_map[] = {
  * @cfg_charger_detect_eoc:	charger can detect end of charging
  * @cfg_disable_vbatdet_based_recharge:	keep VBATDET comparator overriden to
  *				low and VBATDET irq disabled.
- * @cfg_collapsible_chgr_support: support collapsible charger
  * @cfg_chgr_led_support:	support charger led work.
  * @cfg_safe_current:		battery safety current setting
  * @cfg_hot_batt_p:		hot battery threshold setting
@@ -335,7 +377,7 @@ struct qpnp_lbc_chip {
 	bool				fastchg_on;
 	bool				cfg_use_external_charger;
 	bool				cfg_chgr_led_support;
-	bool				non_collapsible_chgr_detected;
+	bool				cfg_bms_controlled_charging;
 	unsigned int			cfg_warm_bat_chg_ma;
 	unsigned int			cfg_cool_bat_chg_ma;
 	unsigned int			cfg_safe_voltage_mv;
@@ -344,7 +386,6 @@ struct qpnp_lbc_chip {
 	unsigned int			cfg_charger_detect_eoc;
 	unsigned int			cfg_disable_vbatdet_based_recharge;
 	unsigned int			cfg_batt_weak_voltage_uv;
-	unsigned int			cfg_collapsible_chgr_support;
 	unsigned int			cfg_warm_bat_mv;
 	unsigned int			cfg_cool_bat_mv;
 	unsigned int			cfg_hot_batt_p;
@@ -367,7 +408,6 @@ struct qpnp_lbc_chip {
 	int				usb_psy_ma;
 	int				delta_vddmax_uv;
 	int				init_trim_uv;
-	struct delayed_work		collapsible_detection_work;
 
 	/* parallel-chg params */
 	int				parallel_charging_enabled;
@@ -403,7 +443,7 @@ static void qpnp_lbc_enable_irq(struct qpnp_lbc_chip *chip,
 
 	spin_lock_irqsave(&chip->irq_lock, flags);
 	if (__test_and_clear_bit(0, &irq->disabled)) {
-		pr_debug("number = %d\n", irq->irq);
+		tinno_pr_debug("number = %d\n", irq->irq);
 		enable_irq(irq->irq);
 		if (irq->is_wake)
 			enable_irq_wake(irq->irq);
@@ -418,7 +458,7 @@ static void qpnp_lbc_disable_irq(struct qpnp_lbc_chip *chip,
 
 	spin_lock_irqsave(&chip->irq_lock, flags);
 	if (!__test_and_set_bit(0, &irq->disabled)) {
-		pr_debug("number = %d\n", irq->irq);
+		tinno_pr_debug("number = %d\n", irq->irq);
 		disable_irq_nosync(irq->irq);
 		if (irq->is_wake)
 			disable_irq_wake(irq->irq);
@@ -523,23 +563,25 @@ static int qpnp_lbc_masked_write(struct qpnp_lbc_chip *chip, u16 base,
 	struct spmi_device *spmi = chip->spmi;
 	unsigned long flags;
 
+	tinno_pr_debug("val=0x%x \n",val);
+	
 	spin_lock_irqsave(&chip->hw_access_lock, flags);
+	
 	rc = __qpnp_lbc_read(spmi, base, &reg_val, 1);
 	if (rc) {
 		pr_err("spmi read failed: addr=%03X, rc=%d\n", base, rc);
 		goto out;
 	}
-	pr_debug("addr = 0x%x read 0x%x\n", base, reg_val);
+	tinno_pr_debug("addr = 0x%x read 0x%x\n", base, reg_val);
 
 	reg_val &= ~mask;
 	reg_val |= val & mask;
 
-	pr_debug("writing to base=%x val=%x\n", base, reg_val);
+	tinno_pr_debug("writing to base=%x val=%x\n", base, reg_val);
 
 	rc = __qpnp_lbc_write(spmi, base, &reg_val, 1);
 	if (rc)
 		pr_err("spmi write failed: addr=%03X, rc=%d\n", base, rc);
-
 out:
 	spin_unlock_irqrestore(&chip->hw_access_lock, flags);
 	return rc;
@@ -556,11 +598,11 @@ static int __qpnp_lbc_secure_masked_write(struct spmi_device *spmi, u16 base,
 		pr_err("spmi read failed: addr=%03X, rc=%d\n", base, rc);
 		return rc;
 	}
-	pr_debug("addr = 0x%x read 0x%x\n", base, reg_val);
+	tinno_pr_debug("addr = 0x%x read 0x%x\n", base, reg_val);
 
 	reg_val &= ~mask;
 	reg_val |= val & mask;
-	pr_debug("writing to base=%x val=%x\n", base, reg_val);
+	tinno_pr_debug("writing to base=%x val=%x\n", base, reg_val);
 
 	reg_val1 = 0xA5;
 	rc = __qpnp_lbc_write(spmi, base + SEC_ACCESS, &reg_val1, 1);
@@ -627,10 +669,48 @@ static u8 qpnp_lbc_get_trim_val(struct qpnp_lbc_chip *chip)
 		i = ARRAY_SIZE(vddtrim_map) - 1;
 		break;
 	}
-
 	return vddtrim_map[i].trim_val;
 }
 
+extern void machine_power_off(void);
+
+//#define TINNO_CHG_DET //add by alik
+#ifdef TINNO_CHG_DET
+static int need_reset_current=0;
+extern int time_s;
+extern int time_s_probe;
+static void reset_chg_current(struct qpnp_lbc_chip *chip_temp);
+
+
+static int tinno_qpnp_lbc_is_usb_chg_plugged_in(struct qpnp_lbc_chip *chip)
+{
+	u8 usbin_valid_rt_sts;
+	int rc;
+
+	rc = qpnp_lbc_read(chip, chip->usb_chgpth_base + INT_RT_STS_REG,
+				&usbin_valid_rt_sts, 1);
+	if (rc) {
+		pr_err("spmi read failed: addr=%03X, rc=%d\n",
+				chip->usb_chgpth_base + INT_RT_STS_REG, rc);
+		return rc;
+	}
+
+	tinno_pr_debug("rt_sts 0x%x chg_curren:%d \n", usbin_valid_rt_sts,chip->usb_psy_ma);
+
+	if(!(usbin_valid_rt_sts & USB_IN_VALID_MASK))
+	{
+		if(chg_boot_flag)
+		{
+			tinno_pr_debug("charger boot mode ,no charging need shutdown!\n");
+		       machine_power_off();	
+		}
+	}
+	return (usbin_valid_rt_sts & USB_IN_VALID_MASK) ? 1 : 0;
+}
+
+
+
+#endif
 static int qpnp_lbc_is_usb_chg_plugged_in(struct qpnp_lbc_chip *chip)
 {
 	u8 usbin_valid_rt_sts;
@@ -644,29 +724,51 @@ static int qpnp_lbc_is_usb_chg_plugged_in(struct qpnp_lbc_chip *chip)
 		return rc;
 	}
 
-	pr_debug("rt_sts 0x%x\n", usbin_valid_rt_sts);
+//	tinno_pr_debug("rt_sts 0x%x chg_curren:%d \n", usbin_valid_rt_sts,chip->usb_psy_ma);
 
+
+#ifdef TINNO_CHG_DET
+if((usbin_valid_rt_sts& USB_IN_VALID_MASK)&&(chip->usb_psy_ma<100))
+{
+tinno_pr_debug("TINNO_CHG_DET 1 %d \n",need_reset_current);
+	if(need_reset_current==0)
+	{
+		time_s=(jiffies/1000);
+tinno_pr_debug("TINNO_CHG_DET 2 time_s :%d time_s_probe:%d \n",time_s,time_s_probe);		
+		if(((time_s-time_s_probe)>=3)&&((time_s-time_s_probe)<4))
+		{
+tinno_pr_debug("TINNO_CHG_DET 3\n");		
+			reset_chg_current(chip);
+			need_reset_current=1;	
+		}
+	}
+
+}	
+#endif
+	if(!(usbin_valid_rt_sts & USB_IN_VALID_MASK))
+	{
+		if(chg_boot_flag)
+		{
+			tinno_pr_debug("charger boot mode ,no charging need shutdown!\n");
+		       machine_power_off();
+		}
+	}
 	return (usbin_valid_rt_sts & USB_IN_VALID_MASK) ? 1 : 0;
 }
 
-static int qpnp_lbc_is_chg_gone(struct qpnp_lbc_chip *chip)
+
+#ifdef TINNO_CHG_DET
+
+static struct qpnp_lbc_chip *chip_temp;
+int check_usb_chg_pluhhed_in(void)
 {
-	u8 rt_sts;
-	int rc;
-
-	rc = qpnp_lbc_read(chip, chip->usb_chgpth_base + INT_RT_STS_REG,
-				&rt_sts, 1);
-	if (rc) {
-		pr_err("spmi read failed: addr=0x%04x, rc=%d\n",
-				chip->usb_chgpth_base + INT_RT_STS_REG, rc);
-		return rc;
+	if(chip_temp)
+	{
+		return tinno_qpnp_lbc_is_usb_chg_plugged_in(chip_temp);
 	}
-
-	pr_debug("rt_sts 0x%x\n", rt_sts);
-
-	return (rt_sts & CHG_GONE_BIT) ? 1 : 0;
+	return 0;
 }
-
+#endif
 static int qpnp_lbc_charger_enable(struct qpnp_lbc_chip *chip, int reason,
 					int enable)
 {
@@ -674,7 +776,7 @@ static int qpnp_lbc_charger_enable(struct qpnp_lbc_chip *chip, int reason,
 	u8 reg_val;
 	int rc = 0;
 
-	pr_debug("reason=%d requested_enable=%d disabled_status=%d\n",
+	tinno_pr_debug("reason=%d requested_enable=%d disabled_status=%d\n",
 					reason, enable, disabled);
 	if (enable)
 		disabled &= ~reason;
@@ -682,15 +784,20 @@ static int qpnp_lbc_charger_enable(struct qpnp_lbc_chip *chip, int reason,
 		disabled |= reason;
 
 	if (!!chip->charger_disabled == !!disabled)
-		goto skip;
-
+		{
+			tinno_pr_debug("go to skip \n");
+			goto skip;
+		}
 	reg_val = !!disabled ? CHG_FORCE_BATT_ON : CHG_ENABLE;
+	tinno_pr_debug("tinno_pr_debug=%u \n",chip->chgr_base);
 	rc = qpnp_lbc_masked_write(chip, chip->chgr_base + CHG_CTRL_REG,
 				CHG_EN_MASK, reg_val);
 	if (rc) {
 		pr_err("Failed to %s charger rc=%d\n",
 				reg_val ? "enable" : "disable", rc);
 		return rc;
+	}else{
+				tinno_pr_debug("write ok! \n");
 	}
 skip:
 	chip->charger_disabled = disabled;
@@ -737,7 +844,7 @@ static int qpnp_lbc_bat_if_configure_btc(struct qpnp_lbc_chip *chip)
 	if (!chip->cfg_btc_disabled)
 		btc_cfg |= BTC_COMP_EN_MASK;
 
-	pr_debug("BTC configuration mask=%x\n", btc_cfg);
+	tinno_pr_debug("BTC configuration mask=%x\n", btc_cfg);
 
 	rc = qpnp_lbc_masked_write(chip,
 			chip->bat_if_base + BAT_IF_BTC_CTRL,
@@ -746,75 +853,6 @@ static int qpnp_lbc_bat_if_configure_btc(struct qpnp_lbc_chip *chip)
 		pr_err("Failed to configure BTC rc=%d\n", rc);
 
 	return rc;
-}
-
-static int qpnp_chg_collapsible_chgr_config(struct qpnp_lbc_chip *chip,
-		bool enable)
-{
-	u8 reg_val;
-	int rc;
-
-	pr_debug("Configure for %scollapsible charger\n",
-			enable ? "" : "non-");
-	/*
-	 * The flow to enable/disable the collapsible charger configuration:
-	 *	Enable:  Override USBIN_LLIMIT_OK -->
-	 *		 Disable VIN_MIN comparator -->
-	 *		 Enable CHG_GONE comparator
-	 *	Disable: Enable VIN_MIN comparator -->
-	 *		 Enable USBIN_LLIMIT_OK -->
-	 *		 Disable CHG_GONE comparator
-	 */
-	if (enable) {
-		/* Override USBIN_LLIMIT_OK */
-		reg_val = USBIN_LLIMIT_OK_OVERRIDE_1;
-		rc = __qpnp_lbc_secure_masked_write(chip->spmi,
-				chip->usb_chgpth_base,
-				USB_COMP_OVR1_REG,
-				USBIN_LLIMIT_OK_MASK, reg_val);
-		if (rc) {
-			pr_err("Failed to override USB_LLIMIT_OK rc = %d\n",
-							rc);
-			return rc;
-		}
-	}
-
-	/* Configure VIN_MIN comparator */
-	rc = __qpnp_lbc_secure_masked_write(chip->spmi,
-			chip->chgr_base, CHG_TEST_LOOP_REG,
-			VIN_MIN_LOOP_DISABLE_BIT,
-			enable ? VIN_MIN_LOOP_DISABLE_BIT : 0);
-	if (rc) {
-		pr_err("Failed to %s VIN_MIN comparator rc = %d\n",
-				enable ? "disable" : "enable", rc);
-		return rc;
-	}
-
-	if (!enable) {
-		/* Enable USBIN_LLIMIT_OK */
-		reg_val = USBIN_LLIMIT_OK_NO_OVERRIDE;
-		rc = __qpnp_lbc_secure_masked_write(chip->spmi,
-				chip->usb_chgpth_base,
-				USB_COMP_OVR1_REG,
-				USBIN_LLIMIT_OK_MASK, reg_val);
-		if (rc) {
-			pr_err("Failed to override USB_LLIMIT_OK rc = %d\n",
-							rc);
-			return rc;
-		}
-	}
-
-	/* Configure CHG_GONE comparator */
-	reg_val = enable ? CHG_GONE_OK_EN_BIT : 0;
-	rc = __qpnp_lbc_secure_masked_write(chip->spmi,
-			chip->usb_chgpth_base, USB_OVP_TST5_REG,
-			CHG_GONE_OK_EN_BIT, reg_val);
-	if (rc) {
-		pr_err("Failed to write CHG_GONE comparator rc = %d\n", rc);
-		return rc;
-	}
-
-	return 0;
 }
 
 #define QPNP_LBC_VBATWEAK_MIN_UV        3000000
@@ -831,7 +869,7 @@ static int qpnp_lbc_vbatweak_set(struct qpnp_lbc_chip *chip, int voltage)
 	} else {
 		reg_val = (voltage - QPNP_LBC_VBATWEAK_MIN_UV) /
 					QPNP_LBC_VBATWEAK_STEP_UV;
-		pr_debug("VBAT_WEAK=%d setting %02x\n",
+		tinno_pr_debug("VBAT_WEAK=%d setting %02x\n",
 				chip->cfg_batt_weak_voltage_uv, reg_val);
 		rc = qpnp_lbc_write(chip, chip->chgr_base + CHG_VBAT_WEAK_REG,
 					&reg_val, 1);
@@ -856,7 +894,7 @@ static int qpnp_lbc_vddsafe_set(struct qpnp_lbc_chip *chip, int voltage)
 		return -EINVAL;
 	}
 	reg_val = (voltage - QPNP_LBC_VBAT_MIN_MV) / QPNP_LBC_VBAT_STEP_MV;
-	pr_debug("voltage=%d setting %02x\n", voltage, reg_val);
+	tinno_pr_debug("voltage=%d setting %02x\n", voltage, reg_val);
 	rc = qpnp_lbc_write(chip, chip->chgr_base + CHG_VDD_SAFE_REG,
 				&reg_val, 1);
 	if (rc)
@@ -879,7 +917,7 @@ static int qpnp_lbc_vddmax_set(struct qpnp_lbc_chip *chip, int voltage)
 
 	spin_lock_irqsave(&chip->hw_access_lock, flags);
 	reg_val = (voltage - QPNP_LBC_VBAT_MIN_MV) / QPNP_LBC_VBAT_STEP_MV;
-	pr_debug("voltage=%d setting %02x\n", voltage, reg_val);
+	tinno_pr_debug("voltage=%d setting %02x\n", voltage, reg_val);
 	rc = __qpnp_lbc_write(chip->spmi, chip->chgr_base + CHG_VDD_MAX_REG,
 				&reg_val, 1);
 	if (rc) {
@@ -916,7 +954,7 @@ static int qpnp_lbc_vddmax_set(struct qpnp_lbc_chip *chip, int voltage)
 			goto out;
 		}
 
-		pr_debug("VDD_MAX delta=%d trim value=%x\n",
+		tinno_pr_debug("VDD_MAX delta=%d trim value=%x\n",
 				chip->delta_vddmax_uv, trim_val);
 	}
 
@@ -954,14 +992,14 @@ static void qpnp_lbc_adjust_vddmax(struct qpnp_lbc_chip *chip, int vbat_uv)
 	 * If delta_uv is negative always apply trim.
 	 */
 	if (delta_uv > 0 && delta_uv < QPNP_LBC_MIN_DELTA_UV) {
-		pr_debug("vbat is not low enough to increase vdd\n");
+		tinno_pr_debug("vbat is not low enough to increase vdd\n");
 		return;
 	}
 
-	pr_debug("vbat=%d current delta_uv=%d prev delta_vddmax_uv=%d\n",
+	tinno_pr_debug("vbat=%d current delta_uv=%d prev delta_vddmax_uv=%d\n",
 			vbat_uv, delta_uv, chip->delta_vddmax_uv);
 	chip->delta_vddmax_uv = delta_uv + chip->delta_vddmax_uv;
-	pr_debug("new delta_vddmax_uv  %d\n", chip->delta_vddmax_uv);
+	tinno_pr_debug("new delta_vddmax_uv  %d\n", chip->delta_vddmax_uv);
 	rc = qpnp_lbc_set_appropriate_vddmax(chip);
 	if (rc) {
 		pr_err("Failed to set appropriate vddmax rc=%d\n", rc);
@@ -984,7 +1022,7 @@ static int qpnp_lbc_vinmin_set(struct qpnp_lbc_chip *chip, int voltage)
 	}
 
 	reg_val = (voltage - QPNP_LBC_VINMIN_MIN_MV) / QPNP_LBC_VINMIN_STEP_MV;
-	pr_debug("VIN_MIN=%d setting %02x\n", voltage, reg_val);
+	tinno_pr_debug("VIN_MIN=%d setting %02x\n", voltage, reg_val);
 	rc = qpnp_lbc_write(chip, chip->chgr_base + CHG_VIN_MIN_REG,
 				&reg_val, 1);
 	if (rc)
@@ -1009,8 +1047,10 @@ static int qpnp_lbc_ibatsafe_set(struct qpnp_lbc_chip *chip, int safe_current)
 
 	reg_val = (safe_current - QPNP_LBC_IBATSAFE_MIN_MA)
 			/ QPNP_LBC_I_STEP_MA;
-	pr_debug("Ibate_safe=%d setting %02x\n", safe_current, reg_val);
+	tinno_pr_debug("Ibate_safe=%d setting %02x\n", safe_current, reg_val);
 
+	tinno_pr_debug("chip->chgr_base=0x%x SAFE_REG 0x%x\n", chip->chgr_base, chip->chgr_base+ CHG_IBAT_SAFE_REG);
+	
 	rc = qpnp_lbc_write(chip, chip->chgr_base + CHG_IBAT_SAFE_REG,
 				&reg_val, 1);
 	if (rc)
@@ -1031,12 +1071,13 @@ static int qpnp_lbc_ibatmax_set(struct qpnp_lbc_chip *chip, int chg_current)
 	int rc;
 
 	if (chg_current > QPNP_LBC_IBATMAX_MAX)
-		pr_debug("bad mA=%d clamping current\n", chg_current);
+		tinno_pr_debug("bad mA=%d clamping current\n", chg_current);
 
 	chg_current = clamp(chg_current, QPNP_LBC_IBATMAX_MIN,
 						QPNP_LBC_IBATMAX_MAX);
 	reg_val = (chg_current - QPNP_LBC_IBATMAX_MIN) / QPNP_LBC_I_STEP_MA;
 
+	tinno_pr_debug("chip->chgr_base=0x%x CHG_IBAT_MAX_REG 0x%x\n", chip->chgr_base, chip->chgr_base+ CHG_IBAT_MAX_REG);
 	rc = qpnp_lbc_write(chip, chip->chgr_base + CHG_IBAT_MAX_REG,
 				&reg_val, 1);
 	if (rc)
@@ -1065,7 +1106,7 @@ static int qpnp_lbc_tchg_max_set(struct qpnp_lbc_chip *chip, int minutes)
 
 	/* If minutes is 0, just disable timer */
 	if (!minutes) {
-		pr_debug("Charger safety timer disabled\n");
+		tinno_pr_debug("Charger safety timer disabled\n");
 		return rc;
 	}
 
@@ -1073,7 +1114,8 @@ static int qpnp_lbc_tchg_max_set(struct qpnp_lbc_chip *chip, int minutes)
 
 	reg_val = (minutes / QPNP_LBC_TCHG_STEP) - 1;
 
-	pr_debug("TCHG_MAX=%d mins setting %x\n", minutes, reg_val);
+	tinno_pr_debug("TCHG_MAX=%d mins setting %x\n", minutes, reg_val);
+	tinno_pr_debug("chip->chgr_base=0x%x TCHG_MAX_REG 0x%x\n", chip->chgr_base, chip->chgr_base+ CHG_TCHG_MAX_REG);	
 	rc = qpnp_lbc_masked_write(chip, chip->chgr_base + CHG_TCHG_MAX_REG,
 						CHG_TCHG_MAX_MASK, reg_val);
 	if (rc) {
@@ -1099,6 +1141,15 @@ static int qpnp_lbc_tchg_max_set(struct qpnp_lbc_chip *chip, int minutes)
 static void qpnp_lbc_chgr_led_brightness_set(struct led_classdev *cdev,
 		enum led_brightness value)
 {
+#ifdef USE_GPIO_RED_LED
+		 led_level=value;
+		if(led_level)
+		{
+		      gpio_direction_output(chgr_getled_gpio,1);
+		}else{
+		     gpio_direction_output(chgr_getled_gpio,0);
+		}
+#else
 	struct qpnp_lbc_chip *chip = container_of(cdev, struct qpnp_lbc_chip,
 			led_cdev);
 	u8 reg;
@@ -1107,24 +1158,27 @@ static void qpnp_lbc_chgr_led_brightness_set(struct led_classdev *cdev,
 	if (value > LED_FULL)
 		value = LED_FULL;
 
-	pr_debug("set the charger led brightness to value=%d\n", value);
+	tinno_pr_debug("set the charger led brightness to value=%d\n", value);
+
 	reg = (value > LED_OFF) ? CHGR_LED_ON : CHGR_LED_OFF;
 
 	rc = qpnp_lbc_masked_write(chip, chip->chgr_base + LBC_CHGR_LED,
 				CHGR_LED_STAT_MASK, reg);
 	if (rc)
 		pr_err("Failed to write charger led rc=%d\n", rc);
+#endif	
 }
 
 static enum
 led_brightness qpnp_lbc_chgr_led_brightness_get(struct led_classdev *cdev)
 {
-
+#ifdef USE_GPIO_RED_LED
+		return led_level;
+#else
 	struct qpnp_lbc_chip *chip = container_of(cdev, struct qpnp_lbc_chip,
 			led_cdev);
 	u8 reg_val, chgr_led_sts;
 	int rc;
-
 	rc = qpnp_lbc_read(chip, chip->chgr_base + LBC_CHGR_LED,
 				&reg_val, 1);
 	if (rc) {
@@ -1133,15 +1187,16 @@ led_brightness qpnp_lbc_chgr_led_brightness_get(struct led_classdev *cdev)
 	}
 
 	chgr_led_sts = reg_val & CHGR_LED_STAT_MASK;
-	pr_debug("charger led brightness chgr_led_sts=%d\n", chgr_led_sts);
+
+	tinno_pr_debug("charger led brightness chgr_led_sts=%d\n", chgr_led_sts);
 
 	return (chgr_led_sts == CHGR_LED_ON) ? LED_FULL : LED_OFF;
+#endif		
 }
 
 static int qpnp_lbc_register_chgr_led(struct qpnp_lbc_chip *chip)
 {
 	int rc;
-
 	chip->led_cdev.name = "red";
 	chip->led_cdev.brightness_set = qpnp_lbc_chgr_led_brightness_set;
 	chip->led_cdev.brightness_get = qpnp_lbc_chgr_led_brightness_get;
@@ -1186,12 +1241,12 @@ static int qpnp_lbc_vbatdet_override(struct qpnp_lbc_chip *chip, int ovr_val)
 						chip->chgr_base, rc);
 		goto out;
 	}
-	pr_debug("addr = 0x%x read 0x%x\n", chip->chgr_base, reg_val);
+	tinno_pr_debug("addr = 0x%x read 0x%x\n", chip->chgr_base, reg_val);
 
 	reg_val &= ~CHG_VBAT_DET_OVR_MASK;
 	reg_val |= ovr_val & CHG_VBAT_DET_OVR_MASK;
 
-	pr_debug("writing to base=%x val=%x\n", chip->chgr_base, reg_val);
+	tinno_pr_debug("writing to base=%x val=%x\n", chip->chgr_base, reg_val);
 
 	rc = __qpnp_lbc_secure_write(spmi, chip->chgr_base, CHG_COMP_OVR1,
 					&reg_val, 1);
@@ -1293,6 +1348,11 @@ static int get_prop_batt_status(struct qpnp_lbc_chip *chip)
 		pr_err("Failed to read interrupt sts rc= %d\n", rc);
 		return POWER_SUPPLY_CHARGE_TYPE_NONE;
 	}
+	printk("chip->therm_lvl_sel=%d \n",chip->therm_lvl_sel);
+	if(chip->therm_lvl_sel>=3)
+	{
+		return POWER_SUPPLY_STATUS_DISCHARGING;
+	}
 
 	if (reg_val & FAST_CHG_ON_IRQ)
 		return POWER_SUPPLY_STATUS_CHARGING;
@@ -1309,7 +1369,7 @@ static int get_prop_current_now(struct qpnp_lbc_chip *chip)
 			  POWER_SUPPLY_PROP_CURRENT_NOW, &ret);
 		return ret.intval;
 	} else {
-		pr_debug("No BMS supply registered return 0\n");
+		tinno_pr_debug("No BMS supply registered return 0\n");
 	}
 
 	return 0;
@@ -1319,7 +1379,7 @@ static int get_prop_current_now(struct qpnp_lbc_chip *chip)
 static int get_prop_capacity(struct qpnp_lbc_chip *chip)
 {
 	union power_supply_propval ret = {0,};
-	int soc;
+	int soc, battery_status, charger_in;
 
 	if (chip->fake_battery_soc >= 0)
 		return chip->fake_battery_soc;
@@ -1330,6 +1390,33 @@ static int get_prop_capacity(struct qpnp_lbc_chip *chip)
 	if (chip->bms_psy) {
 		chip->bms_psy->get_property(chip->bms_psy,
 				POWER_SUPPLY_PROP_CAPACITY, &ret);
+		mutex_lock(&chip->chg_enable_lock);
+		if (chip->chg_done)
+			chip->bms_psy->get_property(chip->bms_psy,
+					POWER_SUPPLY_PROP_CAPACITY, &ret);
+		battery_status = get_prop_batt_status(chip);
+		charger_in = qpnp_lbc_is_usb_chg_plugged_in(chip);
+
+		/* reset chg_done flag if capacity not 100% */
+		if (ret.intval < 100 && chip->chg_done) {
+			chip->chg_done = false;
+			power_supply_changed(&chip->batt_psy);
+		}
+
+		if (battery_status != POWER_SUPPLY_STATUS_CHARGING
+				&& charger_in
+				&& !chip->cfg_charging_disabled
+				&& chip->cfg_soc_resume_limit
+				&& ret.intval <= chip->cfg_soc_resume_limit
+				&& !chip->cfg_bms_controlled_charging) {
+			tinno_pr_debug("resuming charging at %d%% soc\n",
+					ret.intval);
+			if (!chip->cfg_disable_vbatdet_based_recharge)
+				qpnp_lbc_vbatdet_override(chip, OVERRIDE_0);
+			qpnp_lbc_charger_enable(chip, SOC, 1);
+		}
+		mutex_unlock(&chip->chg_enable_lock);
+
 		soc = ret.intval;
 		if (soc == 0) {
 			if (!qpnp_lbc_is_usb_chg_plugged_in(chip))
@@ -1337,7 +1424,7 @@ static int get_prop_capacity(struct qpnp_lbc_chip *chip)
 		}
 		return soc;
 	} else {
-		pr_debug("No BMS supply registered return %d\n",
+		tinno_pr_debug("No BMS supply registered return %d\n",
 							DEFAULT_CAPACITY);
 	}
 
@@ -1359,30 +1446,146 @@ static int get_prop_batt_temp(struct qpnp_lbc_chip *chip)
 
 	rc = qpnp_vadc_read(chip->vadc_dev, LR_MUX1_BATT_THERM, &results);
 	if (rc) {
-		pr_debug("Unable to read batt temperature rc=%d\n", rc);
+		tinno_pr_debug("Unable to read batt temperature rc=%d\n", rc);
 		return DEFAULT_TEMP;
 	}
-	pr_debug("get_bat_temp %d, %lld\n", results.adc_code,
-							results.physical);
-
+//	tinno_pr_debug("get_bat_temp %d, %lld\n", results.adc_code,
+//							results.physical);
+#if 0
+	return -210;
+#else
 	return (int)results.physical;
+#endif
+}
+
+extern int g_battery_temp;
+
+static int  check_temp_for_chg_current(int level)
+{
+	int current_level;
+	current_level=level;
+	tinno_pr_debug("check_temp_for_chg_current :current_level=%d ,g_battery_temp=%d\n",current_level,g_battery_temp);
+	   
+	if(g_battery_temp<=0)
+	{
+		current_level=3;
+	}
+
+	if((g_battery_temp<10)&&(g_battery_temp>0))
+	{
+		current_level=2;
+	}
+
+	if((g_battery_temp>=10)&&(g_battery_temp<=50))
+	{
+		current_level=0;
+	}
+
+	if((g_battery_temp>50)&&(g_battery_temp<60))
+	{
+		current_level=2;
+	}
+	if (g_battery_temp>=60)
+	{
+		current_level=3;
+	}
+
+	tinno_pr_debug(" current_level=%d \n ",current_level);
+	return current_level;
+	   
 }
 
 static void qpnp_lbc_set_appropriate_current(struct qpnp_lbc_chip *chip)
 {
 	unsigned int chg_current = chip->usb_psy_ma;
-
+       static int last_chg_flag=1;
+	int current_chg_flag=1;
+#ifdef TINNO_HIGH_VOLTAGE_BATTERY	
+	int battery_voltage_temp=0;
+#endif
 	if (chip->bat_is_cool && chip->cfg_cool_bat_chg_ma)
 		chg_current = min(chg_current, chip->cfg_cool_bat_chg_ma);
 	if (chip->bat_is_warm && chip->cfg_warm_bat_chg_ma)
 		chg_current = min(chg_current, chip->cfg_warm_bat_chg_ma);
-	if (chip->therm_lvl_sel != 0 && chip->thermal_mitigation)
+	
+	chip->therm_lvl_sel=check_temp_for_chg_current(chip->therm_lvl_sel);
+
+#ifdef TINNO_HIGH_VOLTAGE_BATTERY
+		battery_voltage_temp=get_last_vm_ocv()/1000;
+		printk("battery_voltage_temp =%d g_battery_temp=%d \n",battery_voltage_temp,g_battery_temp);
+		if((battery_voltage_temp>4000)&&(g_battery_temp>=45))
+		{
+			chip->therm_lvl_sel=3;
+		}
+#endif
+	if (chip->therm_lvl_sel >= 0 && chip->thermal_mitigation)
+	{
 		chg_current = min(chg_current,
 			chip->thermal_mitigation[chip->therm_lvl_sel]);
+                     tinno_pr_debug("chip->thermal_mitigation[chip->therm_lvl_sel] :%d \n",chip->thermal_mitigation[chip->therm_lvl_sel]);
+			tinno_pr_debug("set current thermal-mitigation :%d:%d:%d:%d \n",chip->thermal_mitigation[0],chip->thermal_mitigation[1] \
+			,chip->thermal_mitigation[2],chip->thermal_mitigation[3]);		   
+	}
 
-	pr_debug("setting charger current %d mA\n", chg_current);
+	if(chip->cfg_safe_current!=0)
+	{
+		if(chg_current>chip->cfg_safe_current)
+		{
+			chg_current=chip->cfg_safe_current;
+		}
+	}
+	tinno_pr_debug("setting charger current %d mA therm_lvl_sel:%d \n", chg_current ,chip->therm_lvl_sel);
 	qpnp_lbc_ibatmax_set(chip, chg_current);
+	if(chip->therm_lvl_sel>=3)
+	{	
+		current_chg_flag=0;
+		qpnp_lbc_charger_enable(chip, THERMAL, 0);
+	}else{
+		current_chg_flag=1;
+		qpnp_lbc_charger_enable(chip, THERMAL, 1);
+	}
+	if(current_chg_flag!=last_chg_flag)
+	{
+		power_supply_changed(&chip->batt_psy);
+	}
+	last_chg_flag=current_chg_flag;
 }
+
+
+
+#ifdef TINNO_CHG_DET
+
+static void reset_chg_current(struct qpnp_lbc_chip *chip_temp)
+{
+	union power_supply_propval ret = {0,};
+	int current_ma;
+	//unsigned long flags;
+	//spin_lock_irqsave(&chip->ibat_change_lock, flags);
+	tinno_pr_debug("reset_chg_current \n");
+
+		chip_temp->usb_psy->get_property(chip_temp->usb_psy,
+				POWER_SUPPLY_PROP_CURRENT_MAX, &ret);
+		current_ma = ret.intval / 1000;
+		
+		if(current_ma <= 2)
+		{
+			return;
+		}
+
+		if (current_ma == chip_temp->prev_max_ma)
+			goto skip_current_config_2;
+	
+			chip_temp->usb_psy_ma = current_ma;
+			qpnp_lbc_set_appropriate_current(chip_temp);
+			qpnp_lbc_charger_enable(chip_temp, CURRENT, 1);
+
+skip_current_config_2:
+//	spin_unlock_irqrestore(&chip_temp->ibat_change_lock, flags);
+	tinno_pr_debug("reset_chg_current power supply changed batt_psy\n");
+	power_supply_changed(&chip_temp->batt_psy);
+		
+}
+#endif
 
 static void qpnp_batt_external_power_changed(struct power_supply *psy)
 {
@@ -1395,12 +1598,18 @@ static void qpnp_batt_external_power_changed(struct power_supply *psy)
 	spin_lock_irqsave(&chip->ibat_change_lock, flags);
 	if (!chip->bms_psy)
 		chip->bms_psy = power_supply_get_by_name("bms");
-
-	if (qpnp_lbc_is_usb_chg_plugged_in(chip)) {
+#ifdef TINNO_CHG_DET
+	if (tinno_qpnp_lbc_is_usb_chg_plugged_in(chip))
+#else		
+	if (qpnp_lbc_is_usb_chg_plugged_in(chip))
+#endif
+	 {
 		chip->usb_psy->get_property(chip->usb_psy,
 				POWER_SUPPLY_PROP_CURRENT_MAX, &ret);
 		current_ma = ret.intval / 1000;
 
+		tinno_pr_debug("set current_ma =%d \n",current_ma);
+		
 		if (current_ma == chip->prev_max_ma)
 			goto skip_current_config;
 
@@ -1419,7 +1628,7 @@ static void qpnp_batt_external_power_changed(struct power_supply *psy)
 
 skip_current_config:
 	spin_unlock_irqrestore(&chip->ibat_change_lock, flags);
-	pr_debug("power supply changed batt_psy\n");
+	tinno_pr_debug("power supply changed batt_psy\n");
 	power_supply_changed(&chip->batt_psy);
 }
 
@@ -1555,6 +1764,9 @@ static int qpnp_batt_property_is_writeable(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_VOLTAGE_MIN:
 	case POWER_SUPPLY_PROP_WARM_TEMP:
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
+#ifdef FAKE_TEMP_DEBUG		
+	case POWER_SUPPLY_PROP_TEMP:	
+#endif		
 		return 1;
 	default:
 		break;
@@ -1597,10 +1809,10 @@ static int qpnp_batt_power_set_property(struct power_supply *psy,
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
 		mutex_lock(&chip->chg_enable_lock);
-		switch (val->intval) {
-		case POWER_SUPPLY_STATUS_FULL:
-			if (chip->cfg_float_charge)
-				break;
+
+		if (val->intval == POWER_SUPPLY_STATUS_FULL &&
+				!chip->cfg_float_charge) {
+
 			/* Disable charging */
 			rc = qpnp_lbc_charger_enable(chip, SOC, 0);
 			if (rc)
@@ -1625,23 +1837,29 @@ static int qpnp_batt_power_set_property(struct power_supply *psy,
 					qpnp_lbc_enable_irq(chip,
 						&chip->irqs[CHG_VBAT_DET_LO]);
 			}
-			break;
-		case POWER_SUPPLY_STATUS_CHARGING:
-			chip->chg_done = false;
-			pr_debug("resuming charging by bms\n");
-			if (!chip->cfg_disable_vbatdet_based_recharge)
-				qpnp_lbc_vbatdet_override(chip, OVERRIDE_0);
 
-			qpnp_lbc_charger_enable(chip, SOC, 1);
-			break;
-		case POWER_SUPPLY_STATUS_DISCHARGING:
-			chip->chg_done = false;
-			pr_debug("status = DISCHARGING chg_done = %d\n",
-					chip->chg_done);
-			break;
-		default:
-			break;
 		}
+
+		if (chip->cfg_bms_controlled_charging) {
+			switch (val->intval) {
+			case POWER_SUPPLY_STATUS_CHARGING:
+				chip->chg_done = false;
+				tinno_pr_debug("resuming charging by bms\n");
+				if (!chip->cfg_disable_vbatdet_based_recharge)
+					qpnp_lbc_vbatdet_override(chip,
+								OVERRIDE_0);
+				qpnp_lbc_charger_enable(chip, SOC, 1);
+				break;
+			case POWER_SUPPLY_STATUS_DISCHARGING:
+				chip->chg_done = false;
+				tinno_pr_debug("status = DISCHARGING chg_done = %d\n",
+						chip->chg_done);
+				break;
+			default:
+				break;
+			}
+		}
+
 		mutex_unlock(&chip->chg_enable_lock);
 		break;
 	case POWER_SUPPLY_PROP_COOL_TEMP:
@@ -1649,10 +1867,18 @@ static int qpnp_batt_power_set_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_WARM_TEMP:
 		rc = qpnp_lbc_configure_jeita(chip, psp, val->intval);
-		break;
+		break;		
+
+#ifdef FAKE_TEMP_DEBUG
+	case POWER_SUPPLY_PROP_TEMP:
+		printk("set POWER_SUPPLY_PROP_TEMP !%d \n",val->intval);
+			tinno_fake_temp=val->intval;
+			break;
+#endif
+
 	case POWER_SUPPLY_PROP_CAPACITY:
 		chip->fake_battery_soc = val->intval;
-		pr_debug("power supply changed batt_psy\n");
+		tinno_pr_debug("power supply changed batt_psy\n");
 		break;
 	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
 		chip->cfg_charging_disabled = !(val->intval);
@@ -1685,9 +1911,21 @@ static int qpnp_batt_power_get_property(struct power_supply *psy,
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
 		val->intval = get_prop_batt_status(chip);
+		#ifdef CONFIG_TINNO_L5251
+		if(otg_vbus_state)
+		{
+			val->intval = POWER_SUPPLY_STATUS_DISCHARGING;
+		}
+		#endif
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
 		val->intval = get_prop_charge_type(chip);
+		#ifdef CONFIG_TINNO_L5251
+		if(otg_vbus_state)
+		{
+			val->intval = POWER_SUPPLY_CHARGE_TYPE_NONE;
+		}
+		#endif
 		break;
 	case POWER_SUPPLY_PROP_HEALTH:
 		val->intval = get_prop_batt_health(chip);
@@ -1725,6 +1963,11 @@ static int qpnp_batt_power_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
 		val->intval = chip->therm_lvl_sel;
 		break;
+#ifdef CONFIG_TINNO_L5251
+	case POWER_SUPPLY_PROP_BATTERY_TYPE:
+		val->strval =battery_type_str[battype];
+		break;
+#endif		
 	default:
 		return -EINVAL;
 	}
@@ -1887,7 +2130,7 @@ static void qpnp_lbc_jeita_adc_notification(enum qpnp_tm_state state, void *ctx)
 
 	temp = get_prop_batt_temp(chip);
 
-	pr_debug("temp = %d state = %s\n", temp,
+	tinno_pr_debug("temp = %d state = %s\n", temp,
 			state == ADC_TM_WARM_STATE ? "warm" : "cool");
 
 	if (state == ADC_TM_WARM_STATE) {
@@ -1947,7 +2190,7 @@ static void qpnp_lbc_jeita_adc_notification(enum qpnp_tm_state state, void *ctx)
 		spin_unlock_irqrestore(&chip->ibat_change_lock, flags);
 	}
 
-	pr_debug("warm %d, cool %d, low = %d deciDegC, high = %d deciDegC\n",
+	tinno_pr_debug("warm %d, cool %d, low = %d deciDegC, high = %d deciDegC\n",
 			chip->bat_is_warm, chip->bat_is_cool,
 			chip->adc_param.low_temp, chip->adc_param.high_temp);
 
@@ -2099,7 +2342,7 @@ static int qpnp_lbc_usb_path_init(struct qpnp_lbc_chip *chip)
 		if (rc)
 			pr_err("Failed to configure PERPH_CTRL3 rc=%d\n", rc);
 		else
-			pr_debug("Charger is not following PMIC reset\n");
+			tinno_pr_debug("Charger is not following PMIC reset\n");
 	} else {
 		/*
 		 * Enable charging explictly,
@@ -2152,11 +2395,11 @@ static int qpnp_lbc_misc_init(struct qpnp_lbc_chip *chip)
 					>> VDD_TRIM4_SHIFT);
 		chip->init_trim_uv = qpnp_lbc_get_trim_voltage(trim_center);
 		chip->delta_vddmax_uv = chip->init_trim_uv;
-		pr_debug("Initial trim center %x trim_uv %d\n",
+		tinno_pr_debug("Initial trim center %x trim_uv %d\n",
 				trim_center, chip->init_trim_uv);
 	}
 
-	pr_debug("Setting BOOT_DONE\n");
+	tinno_pr_debug("Setting BOOT_DONE\n");
 	reg_val = MISC_BOOT_DONE;
 	rc = qpnp_lbc_write(chip, chip->misc_base + MISC_BOOT_DONE_REG,
 				&reg_val, 1);
@@ -2173,6 +2416,7 @@ static int show_lbc_config(struct seq_file *m, void *data)
 			"cfg_use_fake_battery\t=\t%d\n"
 			"cfg_use_external_charger\t=\t%d\n"
 			"cfg_chgr_led_support\t=\t%d\n"
+			"cfg_bms_controlled_charging\t=\t%d\n"
 			"cfg_warm_bat_chg_ma\t=\t%d\n"
 			"cfg_cool_bat_chg_ma\t=\t%d\n"
 			"cfg_safe_voltage_mv\t=\t%d\n"
@@ -2180,7 +2424,6 @@ static int show_lbc_config(struct seq_file *m, void *data)
 			"cfg_min_voltage_mv\t=\t%d\n"
 			"cfg_charger_detect_eoc\t=\t%d\n"
 			"cfg_disable_vbatdet_based_recharge\t=\t%d\n"
-			"cfg_collapsible_chgr_support\t=\t%d\n"
 			"cfg_batt_weak_voltage_uv\t=\t%d\n"
 			"cfg_warm_bat_mv\t=\t%d\n"
 			"cfg_cool_bat_mv\t=\t%d\n"
@@ -2199,6 +2442,7 @@ static int show_lbc_config(struct seq_file *m, void *data)
 			chip->cfg_use_fake_battery,
 			chip->cfg_use_external_charger,
 			chip->cfg_chgr_led_support,
+			chip->cfg_bms_controlled_charging,
 			chip->cfg_warm_bat_chg_ma,
 			chip->cfg_cool_bat_chg_ma,
 			chip->cfg_safe_voltage_mv,
@@ -2206,7 +2450,6 @@ static int show_lbc_config(struct seq_file *m, void *data)
 			chip->cfg_min_voltage_mv,
 			chip->cfg_charger_detect_eoc,
 			chip->cfg_disable_vbatdet_based_recharge,
-			chip->cfg_collapsible_chgr_support,
 			chip->cfg_batt_weak_voltage_uv,
 			chip->cfg_warm_bat_mv,
 			chip->cfg_cool_bat_mv,
@@ -2255,17 +2498,21 @@ do {									\
 				" property rc = %d\n", rc);		\
 } while (0)
 
+
+
+
 static int qpnp_charger_read_dt_props(struct qpnp_lbc_chip *chip)
 {
 	int rc = 0;
 	const char *bpd;
-
+	tinno_pr_debug("qpnp_charger_read_dt_props!\n");
+	
 	OF_PROP_READ(chip, cfg_max_voltage_mv, "vddmax-mv", rc, 0);
 	OF_PROP_READ(chip, cfg_safe_voltage_mv, "vddsafe-mv", rc, 0);
 	OF_PROP_READ(chip, cfg_min_voltage_mv, "vinmin-mv", rc, 0);
 	OF_PROP_READ(chip, cfg_safe_current, "ibatsafe-ma", rc, 0);
 	if (rc)
-		pr_err("Error reading required property rc=%d\n", rc);
+		tinno_pr_debug("Error reading required property rc=%d\n", rc);
 
 	OF_PROP_READ(chip, cfg_tchg_mins, "tchg-mins", rc, 1);
 	OF_PROP_READ(chip, cfg_warm_bat_decidegc, "warm-bat-decidegc", rc, 1);
@@ -2275,22 +2522,23 @@ static int qpnp_charger_read_dt_props(struct qpnp_lbc_chip *chip)
 	OF_PROP_READ(chip, cfg_batt_weak_voltage_uv, "vbatweak-uv", rc, 1);
 	OF_PROP_READ(chip, cfg_soc_resume_limit, "resume-soc", rc, 1);
 	if (rc) {
-		pr_err("Error reading optional property rc=%d\n", rc);
+		tinno_pr_debug("Error reading optional property rc=%d\n", rc);
 		return rc;
 	}
 
 	rc = of_property_read_string(chip->spmi->dev.of_node,
 						"qcom,bpd-detection", &bpd);
 	if (rc) {
-
-		chip->cfg_bpd_detection = BPD_TYPE_BAT_THM;
+		tinno_pr_debug("determine bpd use BPD_TYPE_BAT_THM \n");
+		chip->cfg_bpd_detection = BPD_TYPE_BAT_ID;//BPD_TYPE_BAT_THM;
 		rc = 0;
 	} else {
 		chip->cfg_bpd_detection = get_bpd(bpd);
 		if (chip->cfg_bpd_detection < 0) {
-			pr_err("Failed to determine bpd schema rc=%d\n", rc);
+			tinno_pr_debug("Failed to determine bpd schema rc=%d\n", rc);
 			return -EINVAL;
 		}
+	   tinno_pr_debug("determine bpd use cfg_bpd_detection =%d \n",chip->cfg_bpd_detection);	
 	}
 
 	/*
@@ -2313,7 +2561,7 @@ static int qpnp_charger_read_dt_props(struct qpnp_lbc_chip *chip)
 		OF_PROP_READ(chip, cfg_warm_bat_mv, "warm-bat-mv", rc, 1);
 		OF_PROP_READ(chip, cfg_cool_bat_mv, "cool-bat-mv", rc, 1);
 		if (rc) {
-			pr_err("Error reading battery temp prop rc=%d\n", rc);
+			tinno_pr_debug("Error reading battery temp prop rc=%d\n", rc);
 			return rc;
 		}
 	}
@@ -2352,10 +2600,24 @@ static int qpnp_charger_read_dt_props(struct qpnp_lbc_chip *chip)
 			of_property_read_bool(chip->spmi->dev.of_node,
 					"qcom,chgr-led-support");
 
-	/* Get the collapsible charger support property */
-	chip->cfg_collapsible_chgr_support =
+	chgr_getled_gpio = of_get_named_gpio(chip->spmi->dev.of_node, "qcom,chgr-getled-gpio", 0);
+	printk("chgr_getled_gpio=%d \n ",chgr_getled_gpio);
+
+    rc  = gpio_request(chgr_getled_gpio, "CHG GetLed GP");
+    if (rc  < 0) 
+    {
+        printk("Failed to request GPIO:%d, ERRNO:%d",chgr_getled_gpio,rc);
+        rc  = -1;
+    }
+#ifdef USE_GPIO_RED_LED	
+    gpio_direction_output(chgr_getled_gpio,0);
+#else
+    gpio_direction_output(chgr_getled_gpio,1);
+#endif
+
+	chip->cfg_bms_controlled_charging =
 			of_property_read_bool(chip->spmi->dev.of_node,
-					"qcom,collapsible-chgr-support");
+					"qcom,bms-controlled-charging");
 
 	/* Disable charging when faking battery values */
 	if (chip->cfg_use_fake_battery)
@@ -2372,7 +2634,7 @@ static int qpnp_charger_read_dt_props(struct qpnp_lbc_chip *chip)
 			GFP_KERNEL);
 
 		if (chip->thermal_mitigation == NULL) {
-			pr_err("thermal mitigation kzalloc() failed.\n");
+			tinno_pr_debug("thermal mitigation kzalloc() failed.\n");
 			return -ENOMEM;
 		}
 
@@ -2382,78 +2644,47 @@ static int qpnp_charger_read_dt_props(struct qpnp_lbc_chip *chip)
 				chip->thermal_mitigation,
 				chip->cfg_thermal_levels);
 		if (rc) {
-			pr_err("Failed to read threm limits rc = %d\n", rc);
+			tinno_pr_debug("Failed to read threm limits rc = %d\n", rc);
 			return rc;
 		}
+		tinno_pr_debug("thermal-mitigation :%d:%d:%d:%d \n",chip->thermal_mitigation[0],chip->thermal_mitigation[1] \
+			,chip->thermal_mitigation[2],chip->thermal_mitigation[3]);
 	}
 
-	pr_debug("vddmax-mv=%d, vddsafe-mv=%d, vinmin-mv=%d, ibatsafe-ma=$=%d\n",
+	tinno_pr_debug("vddmax-mv=%d, vddsafe-mv=%d, vinmin-mv=%d, ibatsafe-ma=$=%d\n",
 			chip->cfg_max_voltage_mv,
 			chip->cfg_safe_voltage_mv,
 			chip->cfg_min_voltage_mv,
 			chip->cfg_safe_current);
-	pr_debug("warm-bat-decidegc=%d, cool-bat-decidegc=%d, batt-hot-percentage=%d, batt-cold-percentage=%d\n",
+	tinno_pr_debug("warm-bat-decidegc=%d, cool-bat-decidegc=%d, batt-hot-percentage=%d, batt-cold-percentage=%d\n",
 			chip->cfg_warm_bat_decidegc,
 			chip->cfg_cool_bat_decidegc,
 			chip->cfg_hot_batt_p,
 			chip->cfg_cold_batt_p);
-	pr_debug("tchg-mins=%d, vbatweak-uv=%d, resume-soc=%d\n",
+	tinno_pr_debug("tchg-mins=%d, vbatweak-uv=%d, resume-soc=%d\n",
 			chip->cfg_tchg_mins,
 			chip->cfg_batt_weak_voltage_uv,
 			chip->cfg_soc_resume_limit);
-	pr_debug("bpd-detection=%d, ibatmax-warm-ma=%d, ibatmax-cool-ma=%d, warm-bat-mv=%d, cool-bat-mv=%d\n",
+	tinno_pr_debug("bpd-detection=%d, ibatmax-warm-ma=%d, ibatmax-cool-ma=%d, warm-bat-mv=%d, cool-bat-mv=%d\n",
 			chip->cfg_bpd_detection,
 			chip->cfg_warm_bat_chg_ma,
 			chip->cfg_cool_bat_chg_ma,
 			chip->cfg_warm_bat_mv,
 			chip->cfg_cool_bat_mv);
-	pr_debug("btc-disabled=%d, charging-disabled=%d, use-default-batt-values=%d, float-charge=%d\n",
+	tinno_pr_debug("btc-disabled=%d, charging-disabled=%d, use-default-batt-values=%d, float-charge=%d\n",
 			chip->cfg_btc_disabled,
 			chip->cfg_charging_disabled,
 			chip->cfg_use_fake_battery,
 			chip->cfg_float_charge);
-	pr_debug("charger-detect-eoc=%d, disable-vbatdet-based-recharge=%d, chgr-led-support=%d\n",
+	tinno_pr_debug("charger-detect-eoc=%d, disable-vbatdet-based-recharge=%d, chgr-led-support=%d, bms-controlled-charging=%d\n",
 			chip->cfg_charger_detect_eoc,
 			chip->cfg_disable_vbatdet_based_recharge,
-			chip->cfg_chgr_led_support);
-	pr_debug("collapsible-chg-support=%d, use-external-charger=%d, thermal_levels=%d\n",
-			chip->cfg_collapsible_chgr_support,
+			chip->cfg_chgr_led_support,
+			chip->cfg_bms_controlled_charging);
+	tinno_pr_debug("use-external-charger=%d, thermal_levels=%d\n",
 			chip->cfg_use_external_charger,
 			chip->cfg_thermal_levels);
 	return rc;
-}
-
-#define CHG_REMOVAL_DETECT_DLY_MS	300
-static irqreturn_t qpnp_lbc_chg_gone_irq_handler(int irq, void *_chip)
-{
-	struct qpnp_lbc_chip *chip = _chip;
-	int chg_gone;
-
-	if (chip->cfg_collapsible_chgr_support) {
-		chg_gone = qpnp_lbc_is_chg_gone(chip);
-		pr_debug("chg-gone triggered, rt_sts: %d\n", chg_gone);
-		if (chg_gone) {
-			/*
-			 * Disable charger to prevent fastchg irq storming
-			 * if a non-collapsible charger is being used.
-			 */
-			pr_debug("disable charging for non-collapsbile charger\n");
-			qpnp_lbc_charger_enable(chip, COLLAPSE, 0);
-			qpnp_lbc_disable_irq(chip, &chip->irqs[USBIN_VALID]);
-			qpnp_lbc_disable_irq(chip, &chip->irqs[USB_CHG_GONE]);
-			qpnp_chg_collapsible_chgr_config(chip, 0);
-			/*
-			 * Check after a delay if the charger is still
-			 * inserted. It decides if a non-collapsible
-			 * charger is being used, or charger has been
-			 * removed.
-			 */
-			schedule_delayed_work(&chip->collapsible_detection_work,
-				msecs_to_jiffies(CHG_REMOVAL_DETECT_DLY_MS));
-		}
-	}
-
-	return IRQ_HANDLED;
 }
 
 static irqreturn_t qpnp_lbc_usbin_valid_irq_handler(int irq, void *_chip)
@@ -2463,7 +2694,7 @@ static irqreturn_t qpnp_lbc_usbin_valid_irq_handler(int irq, void *_chip)
 	unsigned long flags;
 
 	usb_present = qpnp_lbc_is_usb_chg_plugged_in(chip);
-	pr_debug("usbin-valid triggered: %d\n", usb_present);
+	tinno_pr_debug("usbin-valid triggered: %d\n", usb_present);
 
 	if (chip->usb_present ^ usb_present) {
 		chip->usb_present = usb_present;
@@ -2474,11 +2705,6 @@ static irqreturn_t qpnp_lbc_usbin_valid_irq_handler(int irq, void *_chip)
 			qpnp_lbc_set_appropriate_current(chip);
 			spin_unlock_irqrestore(&chip->ibat_change_lock,
 								flags);
-			if (chip->cfg_collapsible_chgr_support)
-				chip->non_collapsible_chgr_detected = false;
-
-			if (chip->supported_feature_flag & VDD_TRIM_SUPPORTED)
-				alarm_try_to_cancel(&chip->vddtrim_alarm);
 		} else {
 			/*
 			 * Override VBAT_DET comparator to start charging
@@ -2488,16 +2714,6 @@ static irqreturn_t qpnp_lbc_usbin_valid_irq_handler(int irq, void *_chip)
 				qpnp_lbc_vbatdet_override(chip, OVERRIDE_0);
 
 			/*
-			 * If collapsible charger supported, enable chgr_gone
-			 * irq, and configure for collapsible charger.
-			 */
-			if (chip->cfg_collapsible_chgr_support &&
-					!chip->non_collapsible_chgr_detected) {
-				qpnp_lbc_enable_irq(chip,
-						&chip->irqs[USB_CHG_GONE]);
-				qpnp_chg_collapsible_chgr_config(chip, 1);
-			}
-			/*
 			 * Enable SOC based charging to make sure
 			 * charging gets enabled on USB insertion
 			 * irrespective of battery SOC above resume_soc.
@@ -2505,7 +2721,7 @@ static irqreturn_t qpnp_lbc_usbin_valid_irq_handler(int irq, void *_chip)
 			qpnp_lbc_charger_enable(chip, SOC, 1);
 		}
 
-		pr_debug("Updating usb_psy PRESENT property\n");
+		tinno_pr_debug("Updating usb_psy PRESENT property\n");
 		power_supply_set_present(chip->usb_psy, chip->usb_present);
 	}
 
@@ -2534,9 +2750,9 @@ static irqreturn_t qpnp_lbc_batt_temp_irq_handler(int irq, void *_chip)
 	int batt_temp_good;
 
 	batt_temp_good = qpnp_lbc_is_batt_temp_ok(chip);
-	pr_debug("batt-temp triggered: %d\n", batt_temp_good);
+	tinno_pr_debug("batt-temp triggered: %d\n", batt_temp_good);
 
-	pr_debug("power supply changed batt_psy\n");
+	tinno_pr_debug("power supply changed batt_psy\n");
 	power_supply_changed(&chip->batt_psy);
 	return IRQ_HANDLED;
 }
@@ -2547,17 +2763,17 @@ static irqreturn_t qpnp_lbc_batt_pres_irq_handler(int irq, void *_chip)
 	int batt_present;
 
 	batt_present = qpnp_lbc_is_batt_present(chip);
-	pr_debug("batt-pres triggered: %d\n", batt_present);
+	tinno_pr_debug("batt-pres triggered: %d\n", batt_present);
 
 	if (chip->batt_present ^ batt_present) {
 		chip->batt_present = batt_present;
-		pr_debug("power supply changed batt_psy\n");
+		tinno_pr_debug("power supply changed batt_psy\n");
 		power_supply_changed(&chip->batt_psy);
 
 		if ((chip->cfg_cool_bat_decidegc
 					|| chip->cfg_warm_bat_decidegc)
 					&& batt_present) {
-			pr_debug("enabling vadc notifications\n");
+			tinno_pr_debug("enabling vadc notifications\n");
 			if (qpnp_adc_tm_channel_measure(chip->adc_tm_dev,
 						&chip->adc_param))
 				pr_err("request ADC error\n");
@@ -2566,7 +2782,7 @@ static irqreturn_t qpnp_lbc_batt_pres_irq_handler(int irq, void *_chip)
 					&& !batt_present) {
 			qpnp_adc_tm_disable_chan_meas(chip->adc_tm_dev,
 					&chip->adc_param);
-			pr_debug("disabling vadc notifications\n");
+			tinno_pr_debug("disabling vadc notifications\n");
 		}
 	}
 	return IRQ_HANDLED;
@@ -2578,14 +2794,14 @@ static irqreturn_t qpnp_lbc_chg_failed_irq_handler(int irq, void *_chip)
 	int rc;
 	u8 reg_val = CHG_FAILED_BIT;
 
-	pr_debug("chg_failed triggered count=%u\n", ++chip->chg_failed_count);
+	tinno_pr_debug("chg_failed triggered count=%u\n", ++chip->chg_failed_count);
 	rc = qpnp_lbc_write(chip, chip->chgr_base + CHG_FAILED_REG,
 				&reg_val, 1);
 	if (rc)
 		pr_err("Failed to write chg_fail clear bit rc=%d\n", rc);
 
 	if (chip->bat_if_base) {
-		pr_debug("power supply changed batt_psy\n");
+		tinno_pr_debug("power supply changed batt_psy\n");
 		power_supply_changed(&chip->batt_psy);
 	}
 
@@ -2603,7 +2819,7 @@ static int qpnp_lbc_is_fastchg_on(struct qpnp_lbc_chip *chip)
 		pr_err("Failed to read interrupt status rc=%d\n", rc);
 		return rc;
 	}
-	pr_debug("charger status %x\n", reg_val);
+	tinno_pr_debug("charger status %x\n", reg_val);
 	return (reg_val & FAST_CHG_ON_IRQ) ? 1 : 0;
 }
 
@@ -2616,7 +2832,7 @@ static irqreturn_t qpnp_lbc_fastchg_irq_handler(int irq, void *_chip)
 
 	fastchg_on = qpnp_lbc_is_fastchg_on(chip);
 
-	pr_debug("FAST_CHG IRQ triggered, fastchg_on: %d\n", fastchg_on);
+	tinno_pr_debug("FAST_CHG IRQ triggered, fastchg_on: %d\n", fastchg_on);
 
 	if (chip->fastchg_on ^ fastchg_on) {
 		chip->fastchg_on = fastchg_on;
@@ -2637,7 +2853,7 @@ static irqreturn_t qpnp_lbc_fastchg_irq_handler(int irq, void *_chip)
 		}
 
 		if (chip->bat_if_base) {
-			pr_debug("power supply changed batt_psy\n");
+			tinno_pr_debug("power supply changed batt_psy\n");
 			power_supply_changed(&chip->batt_psy);
 		}
 	}
@@ -2649,10 +2865,10 @@ static irqreturn_t qpnp_lbc_chg_done_irq_handler(int irq, void *_chip)
 {
 	struct qpnp_lbc_chip *chip = _chip;
 
-	pr_debug("charging done triggered\n");
+	tinno_pr_debug("charging done triggered\n");
 
 	chip->chg_done = true;
-	pr_debug("power supply changed batt_psy\n");
+	tinno_pr_debug("power supply changed batt_psy\n");
 	power_supply_changed(&chip->batt_psy);
 
 	return IRQ_HANDLED;
@@ -2663,7 +2879,7 @@ static irqreturn_t qpnp_lbc_vbatdet_lo_irq_handler(int irq, void *_chip)
 	struct qpnp_lbc_chip *chip = _chip;
 	int rc;
 
-	pr_debug("vbatdet-lo triggered\n");
+	tinno_pr_debug("vbatdet-lo triggered\n");
 
 	/*
 	 * Disable vbatdet irq to prevent interrupt storm when VBAT is
@@ -2700,7 +2916,7 @@ static int qpnp_lbc_is_overtemp(struct qpnp_lbc_chip *chip)
 		return rc;
 	}
 
-	pr_debug("OVERTEMP rt status %x\n", reg_val);
+	tinno_pr_debug("OVERTEMP rt status %x\n", reg_val);
 	return (reg_val & OVERTEMP_ON_IRQ) ? 1 : 0;
 }
 
@@ -2802,9 +3018,6 @@ static int qpnp_lbc_request_irqs(struct qpnp_lbc_chip *chip)
 	SPMI_REQUEST_IRQ(chip, USBIN_VALID, rc, usbin_valid, 0,
 			IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING, 1);
 
-	SPMI_REQUEST_IRQ(chip, USB_CHG_GONE, rc, chg_gone, 0,
-			IRQF_TRIGGER_RISING, 1);
-
 	SPMI_REQUEST_IRQ(chip, USB_OVER_TEMP, rc, usb_overtemp, 0,
 			IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING, 0);
 
@@ -2840,8 +3053,6 @@ static int qpnp_lbc_get_irqs(struct qpnp_lbc_chip *chip, u8 subtype,
 						USBIN_VALID, usbin-valid);
 		SPMI_GET_IRQ_RESOURCE(chip, rc, spmi_resource,
 						USB_OVER_TEMP, usb-over-temp);
-		SPMI_GET_IRQ_RESOURCE(chip, rc, spmi_resource,
-						USB_CHG_GONE, chg-gone);
 		break;
 	};
 
@@ -2857,33 +3068,8 @@ static void determine_initial_status(struct qpnp_lbc_chip *chip)
 	 * Set USB psy online to avoid userspace from shutting down if battery
 	 * capacity is at zero and no chargers online.
 	 */
-	if (chip->usb_present) {
-		if (chip->cfg_collapsible_chgr_support &&
-				!chip->non_collapsible_chgr_detected) {
-			qpnp_lbc_enable_irq(chip,
-					&chip->irqs[USB_CHG_GONE]);
-			qpnp_chg_collapsible_chgr_config(chip, 1);
-		}
+	if (chip->usb_present)
 		power_supply_set_online(chip->usb_psy, 1);
-	}
-}
-
-static void qpnp_lbc_collapsible_detection_work(struct work_struct *work)
-{
-	struct delayed_work *dwork = to_delayed_work(work);
-	struct qpnp_lbc_chip *chip = container_of(dwork,
-			struct qpnp_lbc_chip,
-			collapsible_detection_work);
-
-	if (qpnp_lbc_is_usb_chg_plugged_in(chip)) {
-		chip->non_collapsible_chgr_detected = true;
-		pr_debug("Non-collapsible charger detected\n");
-	} else {
-		chip->non_collapsible_chgr_detected = false;
-		pr_debug("Charger removal detected\n");
-	}
-	qpnp_lbc_charger_enable(chip, COLLAPSE, 1);
-	qpnp_lbc_enable_irq(chip, &chip->irqs[USBIN_VALID]);
 }
 
 #define IBAT_TRIM			-300
@@ -2897,7 +3083,7 @@ static void qpnp_lbc_vddtrim_work_fn(struct work_struct *work)
 
 	vbat_now_uv = get_prop_battery_voltage_now(chip);
 	ibat_now = get_prop_current_now(chip) / 1000;
-	pr_debug("vbat %d ibat %d capacity %d\n",
+	tinno_pr_debug("vbat %d ibat %d capacity %d\n",
 			vbat_now_uv, ibat_now, get_prop_capacity(chip));
 
 	/*
@@ -2907,7 +3093,7 @@ static void qpnp_lbc_vddtrim_work_fn(struct work_struct *work)
 	 */
 	if (!qpnp_lbc_is_fastchg_on(chip) ||
 			!qpnp_lbc_is_usb_chg_plugged_in(chip)) {
-		pr_debug("stop trim charging stopped\n");
+		tinno_pr_debug("stop trim charging stopped\n");
 		goto exit;
 	} else {
 		rc = qpnp_lbc_read(chip, chip->chgr_base + CHG_STATUS_REG,
@@ -3161,6 +3347,12 @@ static int qpnp_lbc_main_probe(struct spmi_device *spmi)
 	struct qpnp_lbc_chip *chip;
 	struct power_supply *usb_psy;
 	int rc = 0;
+    if(strstr(saved_command_line,CHARGER_MODE_BOOT))
+    {
+	chg_boot_flag=1;
+    }else{
+	chg_boot_flag=0;
+	}
 
 	usb_psy = power_supply_get_by_name("usb");
 	if (!usb_psy) {
@@ -3174,7 +3366,7 @@ static int qpnp_lbc_main_probe(struct spmi_device *spmi)
 		pr_err("memory allocation failed.\n");
 		return -ENOMEM;
 	}
-
+	
 	chip->usb_psy = usb_psy;
 	chip->dev = &spmi->dev;
 	chip->spmi = spmi;
@@ -3188,8 +3380,6 @@ static int qpnp_lbc_main_probe(struct spmi_device *spmi)
 	spin_lock_init(&chip->irq_lock);
 	INIT_WORK(&chip->vddtrim_work, qpnp_lbc_vddtrim_work_fn);
 	alarm_init(&chip->vddtrim_alarm, ALARM_REALTIME, vddtrim_callback);
-	INIT_DELAYED_WORK(&chip->collapsible_detection_work,
-			qpnp_lbc_collapsible_detection_work);
 
 	/* Get all device-tree properties */
 	rc = qpnp_charger_read_dt_props(chip);
@@ -3243,14 +3433,19 @@ static int qpnp_lbc_main_probe(struct spmi_device *spmi)
 		return rc;
 	}
 
+
 	if (chip->cfg_chgr_led_support) {
 		rc = qpnp_lbc_register_chgr_led(chip);
 		if (rc) {
 			pr_err("unable to register charger led rc=%d\n", rc);
 			return rc;
 		}
+	}else{
+#ifdef DISABLE_CHG_LED_ON
+			rc = qpnp_lbc_masked_write(chip, chip->chgr_base + LBC_CHGR_LED,
+				CHGR_LED_STAT_MASK, CHGR_LED_OFF);
+#endif
 	}
-
 	if (chip->bat_if_base) {
 		chip->batt_present = qpnp_lbc_is_batt_present(chip);
 		chip->batt_psy.name = "battery";
@@ -3341,7 +3536,10 @@ static int qpnp_lbc_main_probe(struct spmi_device *spmi)
 			get_prop_batt_present(chip),
 			get_prop_battery_voltage_now(chip),
 			get_prop_capacity(chip));
-
+#ifdef TINNO_CHG_DET	
+	chip_temp=chip;
+tinno_pr_debug("qpnp driver init  ok!");
+#endif
 	return 0;
 
 unregister_batt:
@@ -3375,7 +3573,6 @@ static int qpnp_lbc_remove(struct spmi_device *spmi)
 		alarm_cancel(&chip->vddtrim_alarm);
 		cancel_work_sync(&chip->vddtrim_work);
 	}
-	cancel_delayed_work_sync(&chip->collapsible_detection_work);
 	debugfs_remove_recursive(chip->debug_root);
 	if (chip->bat_if_base)
 		power_supply_unregister(&chip->batt_psy);

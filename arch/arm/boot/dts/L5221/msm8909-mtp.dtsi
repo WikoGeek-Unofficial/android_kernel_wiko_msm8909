@@ -63,14 +63,13 @@
 	};
 
 	i2c@78b9000 { /* BLSP1 QUP5 */
-		synaptics@20 {
+	/*	synaptics@20 {
 			compatible = "synaptics,dsx";
 			reg = <0x20>;
 			interrupt-parent = <&msm_gpio>;
 			interrupts = <13 0x2008>;
 			avdd-supply = <&pm8909_l17>;
 			vdd-supply = <&pm8909_l6>;
-			/* pins used by touchscreen */
 			pinctrl-names = "pmx_ts_active","pmx_ts_suspend","pmx_ts_release";
 			pinctrl-0 = <&ts_int_active &ts_reset_active>;
 			pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
@@ -80,17 +79,73 @@
 			synaptics,disable-gpios;
 			synaptics,display-coords = <0 0 719 1279>;
 			synaptics,panel-coords = <0 0 719 1405>;
+		};*/
+		elan_ts@15 {
+			compatible = "elan,ts";
+			reg = <0x15>;
+			pinctrl-names ="gt9xx_int_pin_active" ,"gt9xx_int_pin_suspend";
+			pinctrl-0 = <&gt9xx_int_default>;
+			pinctrl-1 = <&gt9xx_int_sleep>;				
+			interrupt-parent = <&msm_gpio>;
+			interrupts = <13 0x2008>;
+			vdd_ana-supply = <&pm8909_l17>;
+			vcc_i2c-supply = <&pm8909_l6>;
+			elan,rst-gpio = <&msm_gpio 12 0x00>;
+			elan,irq-gpio = <&msm_gpio 13 0x00>;
+						
 		};
+		goodix_ts@5d {
+			compatible = "goodix,gt9xx";
+			reg = <0x5d>;
+			pinctrl-names ="gt9xx_int_pin_active" ,"gt9xx_int_pin_suspend";
+			pinctrl-0 = <&gt9xx_int_default>;
+			pinctrl-1 = <&gt9xx_int_sleep>;			
+			interrupt-parent = <&msm_gpio>;
+			interrupts = <13 0x2008>;
+			vdd_ana-supply = <&pm8909_l17>;
+			vcc_i2c-supply = <&pm8909_l6>;
+			goodix,rst-gpio = <&msm_gpio 12 0x00>;
+			goodix,irq-gpio = <&msm_gpio 13 0x00>;
+			goodix,cfg-group0 = [
+46 E0 01 56 03 02 01 41 02 64 14 00 50 32 03 05 00 00 80 00
+20 21 06 20 10 54 77 03 24 BC 55 57 43 06 05 0A 00 41 02 01
+00 07 00 00 00 00 AA 5D 30 50 37 46 64 94 C5 66 08 00 00 01
+96 48 00 8C 4D 00 82 53 00 7D 59 00 78 60 00 78 08 10 18 00 
+F0 6A 4A FF FF 27 04 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 50 00 00 7F 08 00 09 02 07 04 05 06 03 
+08 01 0C 17 0E 13 10 11 12 0F 16 0D 18 19 1A 00 00 00 00 00 
+00 00 08 0A 0B 24 27 26 28 FF FF FF FF FF 00 00 00 00 00 00 
+00 00 00 FF FF 09 25 FF FF FF FF FF FF FF FF FF FF FF FF FF 
+FF FF FF FF 78 91 82 78 FE 00 00 00 00 00 00 00 00 BE BE BE 
+AA 00 00 00 23 20 30 00 00 00 05 01 00 00 00 00 04 04 06 06 
+00 00 00 00 00 00 2F 01];
+
+			goodix,cfg-group1 = [
+46 E0 01 56 03 02 01 41 02 64 14 00 50 32 03 05 00 00 80 00
+20 21 06 20 10 54 77 03 24 BC 55 57 43 06 05 0A 00 41 02 01
+00 07 00 00 00 00 AA 5D 30 50 37 46 64 94 C5 66 08 00 00 01
+96 48 00 8C 4D 00 82 53 00 7D 59 00 78 60 00 78 08 10 18 00 
+F0 6A 4A FF FF 27 04 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 50 00 00 7F 08 00 09 02 07 04 05 06 03 
+08 01 0C 17 0E 13 10 11 12 0F 16 0D 18 19 1A 00 00 00 00 00 
+00 00 08 0A 0B 24 27 26 28 FF FF FF FF FF 00 00 00 00 00 00 
+00 00 00 FF FF 09 25 FF FF FF FF FF FF FF FF FF FF FF FF FF 
+FF FF FF FF 78 91 82 78 FE 00 00 00 00 00 00 00 00 BE BE BE 
+AA 00 00 00 23 20 30 00 00 00 05 01 00 00 00 00 04 04 06 06 
+00 00 00 00 00 00 2F 01];
+		};
+
 	};
 
 	gen-vkeys {
 		compatible = "qcom,gen-vkeys";
-		label = "synaptics_dsx";
-		qcom,disp-maxx = <719>;
-		qcom,disp-maxy = <1279>;
-		qcom,panel-maxx = <719>;
-		qcom,panel-maxy = <1405>;
-		qcom,key-codes = <158 139 172 217>;
+		label = "goodix-ts";
+		qcom,disp-maxx = <480>;
+		qcom,disp-maxy = <854>;
+		qcom,panel-maxx = <480>;
+		qcom,panel-maxy = <946>;
+		qcom,key-codes = <139 172 158>;
+		qcom,y-offset = <0>;
 	};
 
 	i2c@78b6000 { /* BLSP1 QUP2 */
@@ -119,7 +174,8 @@
 		pinctrl-0 = <&gpio_key_active>;
 		pinctrl-1 = <&gpio_key_suspend>;
 
-		camera_focus {
+  //Tinno cancel by shilei
+	/*	camera_focus {
 			label = "camera_focus";
 			gpios = <&msm_gpio 91 0x1>;
 			linux,input-type = <1>;
@@ -136,7 +192,7 @@
 			gpio-key,wakeup;
 			debounce-interval = <15>;
 		};
-
+*/
 		vol_up {
 			label = "volume_up";
 			gpios = <&msm_gpio 90 0x1>;
@@ -146,7 +202,11 @@
 			debounce-interval = <15>;
 		};
 	};
-
+//add for tinno devinfo
+       dev_info_mtp{
+		compatible = "qcom,dev-info";
+       };
+//add end
 	audio_codec_mtp: sound {
 		compatible = "qcom,msm8x16-audio-codec";
 		qcom,model = "msm8909-snd-card";

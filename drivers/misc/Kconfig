@@ -574,6 +574,10 @@ config QSEECOM
 	  Qualcomm Secure Execution Environment (QSEE) using Secure Channel
 	  Manager (SCM) interface.
 
+config TINNO_DEV_INFO
+   tristate "support tinno dev info!"
+   help
+    This option enables support tinno dev info.
 config QFP_FUSE
 	tristate "QFPROM Fuse Read/Write support"
 	help

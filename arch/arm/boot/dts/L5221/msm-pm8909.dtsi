@@ -200,12 +200,13 @@
 			compatible = "qcom,qpnp-linear-charger";
 			#address-cells = <1>;
 			#size-cells = <1>;
-
+			qcom,chgr-led-support;
+			qcom,chgr-getled-gpio = <&msm_gpio 21 0x0>;
 			qcom,vddmax-mv = <4200>;
 			qcom,vddsafe-mv = <4200>;
 			qcom,vinmin-mv = <4308>;
-			qcom,ibatsafe-ma = <1440>;
-			qcom,thermal-mitigation = <1440 720 630 0>;
+			qcom,ibatsafe-ma = <800>;
+			qcom,thermal-mitigation = <800 630 450 0>;
 			qcom,cool-bat-decidegc = <100>;
 			qcom,warm-bat-decidegc = <450>;
 			qcom,cool-bat-mv = <4100>;
@@ -215,10 +216,11 @@
 			qcom,batt-hot-percentage = <25>;
 			qcom,batt-cold-percentage = <80>;
 			qcom,tchg-mins = <232>;
+			qcom,resume-soc = <99>;
 			qcom,chg-vadc = <&pm8909_vadc>;
 			qcom,chg-adc_tm = <&pm8909_adc_tm>;
 
-			status = "disabled";
+//			status = "disabled";
 
 			qcom,chgr@1000 {
 				reg = <0x1000 0x100>;
@@ -275,7 +277,7 @@
 			qcom,v-cutoff-uv = <3400000>;
 			qcom,max-voltage-uv = <4200000>;
 			qcom,r-conn-mohm = <0>;
-			qcom,shutdown-soc-valid-limit = <100>;
+			qcom,shutdown-soc-valid-limit = <20>;
 			qcom,low-soc-calculate-soc-threshold = <15>;
 			qcom,low-voltage-calculate-soc-ms = <1000>;
 			qcom,low-soc-calculate-soc-ms = <5000>;
@@ -292,7 +294,6 @@
 			qcom,force-s3-on-suspend;
 			qcom,force-s2-in-charging;
 			qcom,report-charger-eoc;
-			qcom,resume-soc = <99>;
 
 			qcom,batt-pres-status@1208 {
 				reg = <0x1208 0x1>;

@@ -1393,6 +1393,28 @@
 			output-low;
 		};
 	     };
+		gt9xx_int_pin_active { 
+		qcom,pins = <&gp 13>; 
+		qcom,num-grp-pins = <1>; 
+		qcom,pin-func = <0>; 
+		label = "gt9xx_int_pin_active"; 
+		/* active state */ 
+		gt9xx_int_default:gt9xx_int_default{ 
+		drive-strength = <2>; /* 2 MA */ 
+		bias-disable; 
+		}; 
+           };
 
+           	gt9xx_int_pin_suspend { 
+		qcom,pins = <&gp 13>; 
+		qcom,num-grp-pins = <1>; 
+		qcom,pin-func = <0>; 
+		label = "gt9xx_int_pin_suspend"; 
+		/*suspended state */ 
+		gt9xx_int_sleep:gt9xx_int_sleep{ 
+		drive-strength = <2>; /* 2 MA */ 
+		bias-disable; 
+		}; 
+           };
 	};
 };

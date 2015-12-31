@@ -822,12 +822,12 @@
 		HSUSB_3p3-supply = <&pm8909_l13>;
 		qcom,vdd-voltage-level = <0 1200000 1200000>;
 
-		qcom,hsusb-otg-phy-init-seq = <0x73 0x80 0xffffffff>;
+		qcom,hsusb-otg-phy-init-seq = <0x73 0x80 0x36 0x81 0x37 0x82 0x33 0x83 0xffffffff>;
 		qcom,hsusb-otg-phy-type = <3>; /* SNPS Femto PHY */
 		qcom,hsusb-otg-mode = <1>; /* DEVICE only */
 		qcom,hsusb-otg-otg-control = <2>; /* PMIC */
 		qcom,dp-manual-pullup;
-		qcom,hsusb-otg-disable-reset;
+		//qcom,hsusb-otg-disable-reset;
 		qcom,phy-dvdd-always-on;
 		qcom,hsusb-otg-mpm-dpsehv-int = <49>;
 		qcom,hsusb-otg-mpm-dmsehv-int = <58>;
@@ -1206,7 +1206,7 @@
                clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
                         <&clock_gcc clk_gcc_blsp1_qup5_i2c_apps_clk>;
                clock-names = "iface_clk", "core_clk";
-               qcom,clk-freq-out = <100000>;
+               qcom,clk-freq-out = <300000>;
                qcom,clk-freq-in  = <19200000>;
                pinctrl-names = "i2c_active", "i2c_sleep";
                pinctrl-0 = <&i2c_5_active>;

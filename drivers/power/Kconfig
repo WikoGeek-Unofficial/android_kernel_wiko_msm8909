@@ -515,6 +515,12 @@ config QPNP_BMS
 	  It registers a fuelgauge bms power supply to report
 	  State of Charge.
 
+config TINNO_BATTERY_VK
+	tristate "Use VK BATTERY PARAMETERS"
+	default n
+	help
+	  Say Y here to Use VK BATTERY PARAMETERS.
+
 config QPNP_LINEAR_CHARGER
 	tristate "QPNP Linear Charger driver"
 	depends on SPMI

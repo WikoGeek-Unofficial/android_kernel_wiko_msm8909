@@ -51,6 +51,14 @@
 #include <linux/qpnp/qpnp-adc.h>
 
 #include <linux/msm-bus.h>
+#ifdef CONFIG_TINNO_L5251 
+#define TINNO_GPIO_CTL_VBUS
+#endif
+#ifdef TINNO_GPIO_CTL_VBUS
+int otg_vbus_en_gpio=0;
+int otg_vbus_state=0;
+#endif
+
 
 #define MSM_USB_BASE	(motg->regs)
 #define MSM_USB_PHY_CSR_BASE (motg->phy_csr_regs)
@@ -114,7 +122,9 @@ static bool mhl_det_in_progress;
 static struct regulator *hsusb_3p3;
 static struct regulator *hsusb_1p8;
 static struct regulator *hsusb_vdd;
+#ifndef TINNO_GPIO_CTL_VBUS
 static struct regulator *vbus_otg;
+#endif
 static struct regulator *mhl_usb_hs_switch;
 static struct power_supply *psy;
 
@@ -696,6 +706,9 @@ static int msm_otg_reset(struct usb_phy *phy)
 		return 0;
 	}
 	motg->reset_counter++;
+	
+    if (motg->phy_irq)
+      disable_irq(motg->phy_irq);	
 
 	ret = msm_otg_phy_reset(motg);
 	if (ret) {
@@ -707,6 +720,9 @@ static int msm_otg_reset(struct usb_phy *phy)
 	ret = msm_otg_link_reset(motg);
 	if (ret) {
 		dev_err(phy->dev, "link reset failed\n");
+		
+	   if (motg->phy_irq)
+      enable_irq(motg->phy_irq);		
 		return ret;
 	}
 
@@ -750,6 +766,9 @@ static int msm_otg_reset(struct usb_phy *phy)
 	if (motg->caps & ALLOW_VDD_MIN_WITH_RETENTION_DISABLED)
 		writel_relaxed(readl_relaxed(USB_OTGSC) & ~(OTGSC_IDPU),
 								USB_OTGSC);
+	
+	 if (motg->phy_irq)
+	enable_irq(motg->phy_irq);	  
 
 	msm_otg_dbg_log_event(&motg->phy, "USB RESET DONE", phy->state,
 			get_pm_runtime_counter(phy->dev));
@@ -1083,8 +1102,12 @@ static void msm_otg_bus_vote(struct msm_otg *motg, enum usb_bus_vote vote)
 {
 	int ret;
 	struct msm_otg_platform_data *pdata = motg->pdata;
-
-	msm_otg_dbg_log_event(&motg->phy, "BUS VOTE", vote, motg->phy.state);
+	if(&motg->dbg_lock)
+	{
+		msm_otg_dbg_log_event(&motg->phy, "BUS VOTE", vote, motg->phy.state);
+	}else{
+	  printk("motg->dbg_lock is null!\n");
+	}
 	/* Check if target allows min_vote to be same as no_vote */
 	if (pdata->bus_scale_table &&
 	    vote >= pdata->bus_scale_table->num_usecases)
@@ -1304,6 +1327,9 @@ static int msm_otg_suspend(struct msm_otg *motg)
 
 	motg->ui_enabled = 0;
 	disable_irq(motg->irq);
+    if (motg->phy_irq)
+      disable_irq(motg->phy_irq);	
+	
 lpm_start:
 	host_bus_suspend = !test_bit(MHL, &motg->inputs) && phy->otg->host &&
 		!test_bit(ID, &motg->inputs);
@@ -1344,6 +1370,9 @@ lpm_start:
 		if (test_bit(A_BUS_REQ, &motg->inputs))
 			motg->pm_done = 1;
 		motg->ui_enabled = 1;
+        if (motg->phy_irq)
+          enable_irq(motg->phy_irq);		
+		
 		enable_irq(motg->irq);
 		return -EBUSY;
 	}
@@ -1592,7 +1621,9 @@ phcd_retry:
 	/* Enable ASYNC IRQ (if present) during LPM */
 	if (motg->async_irq)
 		enable_irq(motg->async_irq);
-
+    if (motg->phy_irq)
+        enable_irq(motg->phy_irq);
+	
 	/* XO shutdown during idle , non wakeable irqs must be disabled */
 	if (device_bus_suspend || host_bus_suspend || !motg->async_irq) {
 		motg->ui_enabled = 1;
@@ -1989,8 +2020,11 @@ static int msm_otg_set_power(struct usb_phy *phy, unsigned mA)
 	 * states when CDP/ACA is connected.
 	 */
 	if (motg->chg_type == USB_SDP_CHARGER)
+	{
+		printk("msm_otg_set_power %d \n",mA);
+	//	mA=500;
 		msm_otg_notify_charger(motg, mA);
-
+	}
 	return 0;
 }
 
@@ -2124,12 +2158,12 @@ static void msm_hsusb_vbus_power(struct msm_otg *motg, bool on)
 			vbus_is_on = on;
 		return;
 	}
-
+#ifndef TINNO_GPIO_CTL_VBUS
 	if (!vbus_otg) {
 		pr_err("vbus_otg is NULL.");
 		return;
 	}
-
+#endif
 	/*
 	 * if entering host mode tell the charger to not draw any current
 	 * from usb before turning on the boost.
@@ -2138,18 +2172,30 @@ static void msm_hsusb_vbus_power(struct msm_otg *motg, bool on)
 	 */
 	if (on) {
 		msm_otg_notify_host_mode(motg, on);
+#ifdef TINNO_GPIO_CTL_VBUS
+		otg_vbus_state=1;
+		gpio_direction_output(otg_vbus_en_gpio,1);
+		printk("vbus power down!\n");
+#else
 		ret = regulator_enable(vbus_otg);
 		if (ret) {
-			pr_err("unable to enable vbus_otg\n");
-			return;
+		pr_err("unable to enable vbus_otg\n");
+		return;
 		}
+#endif			
 		vbus_is_on = true;
 	} else {
+#ifdef TINNO_GPIO_CTL_VBUS
+		otg_vbus_state=0;
+		gpio_direction_output(otg_vbus_en_gpio,0);
+		printk("vbus power down!\n");
+#else	
 		ret = regulator_disable(vbus_otg);
 		if (ret) {
 			pr_err("unable to disable vbus_otg\n");
 			return;
 		}
+#endif		
 		msm_otg_notify_host_mode(motg, on);
 		vbus_is_on = false;
 	}
@@ -2169,6 +2215,7 @@ static int msm_otg_set_host(struct usb_otg *otg, struct usb_bus *host)
 		return -ENODEV;
 	}
 
+#ifndef TINNO_GPIO_CTL_VBUS	
 	if (!motg->pdata->vbus_power && host) {
 		vbus_otg = devm_regulator_get(motg->phy.dev, "vbus_otg");
 		if (IS_ERR(vbus_otg)) {
@@ -2179,6 +2226,7 @@ static int msm_otg_set_host(struct usb_otg *otg, struct usb_bus *host)
 			return PTR_ERR(vbus_otg);
 		}
 	}
+#endif	
 
 	if (!host) {
 		if (otg->phy->state == OTG_STATE_A_HOST) {
@@ -5257,6 +5305,12 @@ struct msm_otg_platform_data *msm_otg_dt_to_pdata(struct platform_device *pdev)
 	if (pdata->pmic_id_irq < 0)
 		pdata->pmic_id_irq = 0;
 
+//add by alik
+#ifdef TINNO_GPIO_CTL_VBUS
+otg_vbus_en_gpio=of_get_named_gpio(node,"qcom,otg_en_gpio",0);
+printk("otg_vbus_en_gpio=%d \n ",otg_vbus_en_gpio);
+gpio_request(otg_vbus_en_gpio, "OTG VBUS EN");
+#endif
 	pdata->hub_reset_gpio = of_get_named_gpio(
 			node, "qcom,hub-reset-gpio", 0);
 	if (pdata->hub_reset_gpio < 0)
@@ -5464,7 +5518,10 @@ static int msm_otg_probe(struct platform_device *pdev)
 	motg->pdata = pdata;
 	phy = &motg->phy;
 	phy->dev = &pdev->dev;
-
+	
+	motg->dbg_idx = 0;
+	motg->dbg_lock = __RW_LOCK_UNLOCKED(lck);
+	
 	if (motg->pdata->bus_scale_table) {
 		motg->bus_perf_client =
 		    msm_bus_scale_register_client(motg->pdata->bus_scale_table);
@@ -5679,8 +5736,8 @@ static int msm_otg_probe(struct platform_device *pdev)
 	/* Ensure that above STOREs are completed before enabling interrupts */
 	mb();
 
-	motg->dbg_idx = 0;
-	motg->dbg_lock = __RW_LOCK_UNLOCKED(lck);
+//	motg->dbg_idx = 0;
+//	motg->dbg_lock = __RW_LOCK_UNLOCKED(lck);
 	ret = msm_otg_mhl_register_callback(motg, msm_otg_mhl_notify_online);
 	if (ret)
 		dev_dbg(&pdev->dev, "MHL can not be supported\n");
