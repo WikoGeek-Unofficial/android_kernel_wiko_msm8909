@@ -214,7 +214,7 @@ AA 00 00 00 23 20 30 00 00 00 05 01 00 00 00 00 04 04 06 06
 		qcom,msm-codec-type = "internal";
 		qcom,msm-ext-pa = "primary";
 		qcom,msm-mclk-freq = <9600000>;
-		qcom,msm-mbhc-hphl-swh = <0>;
+		qcom,msm-mbhc-hphl-swh = <1>;//headset det TN:peter
 		qcom,msm-mbhc-gnd-swh = <0>;
 		qcom,msm-hs-micbias-type = "internal";
 		qcom,msm-micbias1-ext-cap;
@@ -222,10 +222,10 @@ AA 00 00 00 23 20 30 00 00 00 05 01 00 00 00 00 04 04 06 06
 			"RX_BIAS", "MCLK",
 			"SPK_RX_BIAS", "MCLK",
 			"INT_LDO_H", "MCLK",
-			"MIC BIAS External", "Handset Mic",
+			"MIC BIAS Internal1", "Handset Mic",//headset mic TN:peter
 			"MIC BIAS Internal2", "Headset Mic",
 			"MIC BIAS External", "Secondary Mic",
-			"AMIC1", "MIC BIAS External",
+			"AMIC1", "MIC BIAS Internal1",//phone mic TN:peter
 			"AMIC2", "MIC BIAS Internal2",
 			"AMIC3", "MIC BIAS External";
 		pinctrl-names = "cdc_lines_act",
