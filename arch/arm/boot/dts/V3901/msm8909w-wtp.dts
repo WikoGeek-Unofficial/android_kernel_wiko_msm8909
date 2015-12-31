@@ -42,7 +42,7 @@
 };
 
 &mdss_dsi0 {
-	qcom,dsi-pref-prim-pan = <&dsi_hx8394d_480_vid>;
+	qcom,dsi-pref-prim-pan = <&dsi_ili9806e_fwvga_video>;
 };
 
 &soc {

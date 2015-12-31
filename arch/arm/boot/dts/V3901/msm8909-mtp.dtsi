@@ -214,6 +214,21 @@
 		asoc-codec = <&stub_codec>, <&pm8909_conga_dig>;
 		asoc-codec-names = "msm-stub-codec.1", "tombak_codec";
 	};
+	//yajun add button led
+	gpio-leds {
+		compatible = "gpio-leds";
+		status = "okay";
+		pinctrl-0 = <&button_backlight_off>;
+		
+		tinno,rfgpio0 = <&msm_gpio 68 0x00>;              //gpio for tinno rf version 
+		tinno,rfgpio1 = <&msm_gpio 69 0x00>;		      //gpio for tinno rf version 
+		
+		keypad-backlight {
+			gpios = <&msm_gpio 14 0>;
+			label = "button-backlight";
+			linux,default-trigger = "none";
+		};
+	};
 };
 
 &blsp1_uart1 {
@@ -282,7 +297,7 @@
 			1 &intc 0 221 0
 			2 &msm_gpio 38 0>;
 	interrupt-names = "hc_irq", "pwr_irq", "status_irq";
-	cd-gpios = <&msm_gpio 38 0x1>;
+	// cd-gpios = <&msm_gpio 38 0x1>;
 
 	vdd-supply = <&pm8909_l11>;
 	qcom,vdd-voltage-level = <1800000 2950000>;
@@ -406,40 +421,17 @@
 	};
 };
 
-#include "dsi-panel-auo-qvga-cmd.dtsi"
-#include "dsi-panel-auo-cx-qvga-cmd.dtsi"
-#include "dsi-panel-hx8394d-480p-video.dtsi"
-#include "dsi-panel-hx8394d-720p-video.dtsi"
-#include "dsi-panel-hx8394d-qhd-video.dtsi"
+//#include "dsi-panel-hx8394d-720p-video.dtsi"
+//#include "dsi-panel-hx8394d-qhd-video.dtsi"  
+//yajun lcd
+#include "dsi-panel-fl10802-fwvga-video.dtsi"
+#include "dsi-panel-ili9806e-fwvga-video.dtsi"
 
 &mdss_mdp {
 	qcom,mdss-pref-prim-intf = "dsi";
 };
 
-&dsi_auo_cx_qvga_cmd {
-        qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
-        qcom,mdss-dsi-bl-pmic-pwm-frequency = <100>;
-        qcom,mdss-dsi-bl-pmic-bank-select = <0>;
-        qcom,mdss-dsi-pwm-gpio = <&pm8909_mpps 2 0>;
-        qcom,cont-splash-enabled;
-};
-
-&dsi_auo_qvga_cmd {
-        qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
-        qcom,mdss-dsi-bl-pmic-pwm-frequency = <100>;
-        qcom,mdss-dsi-bl-pmic-bank-select = <0>;
-        qcom,mdss-dsi-pwm-gpio = <&pm8909_mpps 2 0>;
-        qcom,cont-splash-enabled;
-};
-
-&dsi_hx8394d_480_vid {
-        qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_pwm";
-        qcom,mdss-dsi-bl-pmic-pwm-frequency = <100>;
-        qcom,mdss-dsi-bl-pmic-bank-select = <0>;
-        qcom,mdss-dsi-pwm-gpio = <&pm8909_mpps 2 0>;
-        qcom,cont-splash-enabled;
-};
-
+/*
 &dsi_hx8394d_720_vid {
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_pwm";
 	qcom,mdss-dsi-bl-pmic-pwm-frequency = <100>;
@@ -454,11 +446,27 @@
 	qcom,mdss-dsi-bl-pmic-bank-select = <0>;
 	qcom,mdss-dsi-pwm-gpio = <&pm8909_mpps 2 0>;
 	qcom,cont-splash-enabled;
+};*/
+&dsi_fl10802_fwvga_video {
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_pwm";
+	qcom,mdss-dsi-bl-pmic-pwm-frequency = <100>;
+	qcom,mdss-dsi-bl-pmic-bank-select = <0>;
+	qcom,mdss-dsi-pwm-gpio = <&pm8909_mpps 2 0>;
+	qcom,cont-splash-enabled;
+	qcom,esd-check-enabled;
 };
 
+&dsi_ili9806e_fwvga_video {
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_pwm";
+	qcom,mdss-dsi-bl-pmic-pwm-frequency = <100>;
+	qcom,mdss-dsi-bl-pmic-bank-select = <0>;
+	qcom,mdss-dsi-pwm-gpio = <&pm8909_mpps 2 0>;
+	qcom,cont-splash-enabled;
+	qcom,esd-check-enabled;
+};
 &pmx_mdss {
 	qcom,num-grp-pins = <2>;
-	qcom,pins = <&gp 25>, <&gp 37>;
+	qcom,pins = <&gp 25>, <&gp 37>;       //yajun ?
 };
 
 &pmx_mdss_te {
@@ -467,13 +475,13 @@
 };
 
 &mdss_dsi0 {
-	qcom,dsi-pref-prim-pan = <&dsi_hx8394d_720_vid>;
+	qcom,dsi-pref-prim-pan = <&dsi_ili9806e_fwvga_video>;
 	pinctrl-names = "mdss_default", "mdss_sleep";
 	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
 	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
 
 	qcom,platform-reset-gpio = <&msm_gpio 25 0>;
-	qcom,platform-bklight-en-gpio = <&msm_gpio 37 0>;
+	qcom,platform-bklight-en-gpio = <&msm_gpio 37 0>;                 //yajun  ?
 };
 
 /* CoreSight */
