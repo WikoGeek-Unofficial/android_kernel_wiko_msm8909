@@ -47,8 +47,17 @@ static struct kobj_attribute vkey_obj_attr = {
 	.show = vkey_show,
 };
 
+
+static struct kobj_attribute vkey_obj_attr_1= {
+	.attr = {
+		.mode = S_IRUGO,
+	},
+	.show = vkey_show,
+};
+
 static struct attribute *vkey_attr[] = {
 	&vkey_obj_attr.attr,
+	&vkey_obj_attr_1.attr,	
 	NULL,
 };
 
@@ -183,6 +192,7 @@ static int vkeys_probe(struct platform_device *pdev)
 	snprintf(name, MAX_BUF_SIZE,
 				"virtualkeys.%s", pdata->name);
 	vkey_obj_attr.attr.name = name;
+	vkey_obj_attr_1.attr.name="virtualkeys.elan_ts";
 
 	vkey_obj = kobject_create_and_add("board_properties", NULL);
 	if (!vkey_obj) {

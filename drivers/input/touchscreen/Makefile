@@ -5,7 +5,7 @@
 # Each configuration option enables a list of files.
 
 wm97xx-ts-y := wm97xx-core.o
-
+obj-$(CONFIG_TOUCHSCREEN_EKTF2232_I2C)	+= elan_ktf.o
 obj-$(CONFIG_TOUCHSCREEN_88PM860X)	+= 88pm860x-ts.o
 obj-$(CONFIG_TOUCHSCREEN_AD7877)	+= ad7877.o
 obj-$(CONFIG_TOUCHSCREEN_AD7879)	+= ad7879.o
@@ -86,4 +86,3 @@ obj-$(CONFIG_TOUCHSCREEN_GT9XX)			+= gt9xx_new/
 obj-$(CONFIG_TOUCHSCREEN_BU21150)	+= bu21150.o
 obj-$(CONFIG_INPUT_MT_WRAPPER)		+= input_mt_wrapper.o
 obj-$(CONFIG_TOUCHSCREEN_IT7260_I2C)    += it7258_ts_i2c.o
-obj-$(CONFIG_TOUCHSCREEN_EKTF2232_I2C)	+= elan_ktf.o
