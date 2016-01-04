@@ -22,8 +22,7 @@
     #include <linux/earlysuspend.h>
 #endif
 #define TPD_PROBE_MAGIC_NUM  20150323
-//extern int tpd_has_probe_flag;
-int tpd_has_probe_flag;
+extern int tpd_has_probe_flag;
 int phy_x_resolution;
 int phy_y_resolution;
 
