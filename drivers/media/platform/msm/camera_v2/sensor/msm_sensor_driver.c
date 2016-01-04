@@ -17,6 +17,20 @@
 #include "camera.h"
 #include "msm_cci.h"
 #include "msm_camera_dt_util.h"
+#if 0
+#include <linux/proc_fs.h>
+#include <asm/uaccess.h>
+ 
+//DEF_TINNO_DEV_INFO(main_camera);
+DEF_TINNO_DEV_INFO(sub_camera);
+DEF_TINNO_DEV_INFO(main_camera);
+DEF_TINNO_DEV_INFO(camera_number);
+static int has_created_camera_dev=0;
+extern int camera_found_number;
+static char main_des_buf[100];
+static char sub_des_buf[100];
+
+#endif
 
 /* Logging macro */
 #undef CDBG
@@ -653,6 +667,20 @@ int32_t msm_sensor_driver_probe(void *setting,
 
 	unsigned long                        mount_pos = 0;
 	uint32_t                             is_yuv;
+#if 0
+	if(!has_created_camera_dev)
+	{
+		CAREAT_TINNO_DEV_INFO(camera_number);
+		has_created_camera_dev=1;
+	}
+
+    if(camera_found_number==0)
+	SET_DEVINFO_STR(camera_number,"0");
+    if(camera_found_number==1)
+	SET_DEVINFO_STR(camera_number,"1");
+	if(camera_found_number==2)
+	SET_DEVINFO_STR(camera_number,"2");
+#endif
 
 	/* Validate input parameters */
 	if (!setting) {
@@ -902,6 +930,31 @@ int32_t msm_sensor_driver_probe(void *setting,
 	}
 
 	pr_err("%s probe succeeded", slave_info->sensor_name);
+	#if 0
+	printk("YC %s position %d \n", __func__,s_ctrl->sensordata->sensor_info->position);
+
+
+	if(s_ctrl->sensordata->sensor_info->position==0){
+	sprintf(main_des_buf, "%s",slave_info->sensor_name);
+	CAREAT_TINNO_DEV_INFO(main_camera);
+	SET_DEVINFO_STR(main_camera,main_des_buf);
+	camera_found_number++;
+	}
+	else if(s_ctrl->sensordata->sensor_info->position==1){
+	sprintf(sub_des_buf, "%s",slave_info->sensor_name);
+	CAREAT_TINNO_DEV_INFO(sub_camera);
+	SET_DEVINFO_STR(sub_camera,sub_des_buf);
+	camera_found_number++;
+	}
+	
+    if(camera_found_number==0)
+	SET_DEVINFO_STR(camera_number,"0");
+    if(camera_found_number==1)
+	SET_DEVINFO_STR(camera_number,"1");
+	if(camera_found_number==2)
+	SET_DEVINFO_STR(camera_number,"2");
+
+	#endif
 
 	/*
 	  Set probe succeeded flag to 1 so that no other camera shall

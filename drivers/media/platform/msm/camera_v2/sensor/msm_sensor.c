@@ -18,6 +18,24 @@
 #include <linux/regulator/rpm-smd-regulator.h>
 #include <linux/regulator/consumer.h>
 
+ 
+#if 0
+#include <linux/proc_fs.h>
+#include <asm/uaccess.h>
+
+DEF_TINNO_DEV_INFO(main_camera);
+DEF_TINNO_DEV_INFO(sub_camera);
+
+static char sub_des_buf[100];
+static char main_des_buf[100];
+
+
+int camera_found_number=0;
+
+#endif
+
+
+
 #undef CDBG
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
 
@@ -523,6 +541,67 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 		pr_err("msm_sensor_match_id chip id doesnot match\n");
 		return -ENODEV;
 	}
+#if 0
+	if((chipid==0x5648)&&((!strcmp(sensor_name,"ov5648_dl"))||(!strcmp(sensor_name,"ov5648_sw"))))
+	{
+	
+	pr_err("L5251 %s: %s: read id \n", __func__, sensor_name);
+	   
+	rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
+		sensor_i2c_client, 0x0100,
+		0x01, MSM_CAMERA_I2C_BYTE_DATA);
+	rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
+		sensor_i2c_client, 0x3d84,
+		0xc0, MSM_CAMERA_I2C_BYTE_DATA);
+	rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
+		sensor_i2c_client, 0x3d84,
+		0xc0, MSM_CAMERA_I2C_BYTE_DATA);
+	rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
+		sensor_i2c_client, 0x3d85,
+		0x00, MSM_CAMERA_I2C_BYTE_DATA);
+	rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
+		sensor_i2c_client, 0x3d86,
+		0x0f, MSM_CAMERA_I2C_BYTE_DATA);
+	rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
+		sensor_i2c_client, 0x3d81,
+		0x01, MSM_CAMERA_I2C_BYTE_DATA);
+	rc = sensor_i2c_client->i2c_func_tbl->i2c_read(
+		sensor_i2c_client, 0x3d05,
+		&otp_id, MSM_CAMERA_I2C_BYTE_DATA);
+    pr_err("L5251 ov5648 otp_id=%d \n",otp_id);
+
+   if( (!strcmp(sensor_name,"ov5648_dl"))&&((otp_id!=5)&&(otp_id!=6)))
+   	{
+	  pr_err("L5251 ov5648_dl =%d  read id fail\n",otp_id); 
+	  return -ENODEV;
+    }
+   else if( (!strcmp(sensor_name,"ov5648_dl"))&&(otp_id==5))
+   	{
+	  pr_err("L5251 ov5648 darling Success match =%d\n",otp_id); 
+    }
+   else if( (!strcmp(sensor_name,"ov5648_dl"))&&(otp_id==6))
+   	{
+	  pr_err("L5251 ov5648 darling fail match =%d\n",otp_id); 
+	  return -ENODEV;
+    }
+
+   if( (!strcmp(sensor_name,"ov5648_sw"))&&((otp_id!=5)&&(otp_id!=6)))
+   	{
+	  pr_err("L5251 ov5648_sw =%d  read id fail\n",otp_id); 
+	  return -ENODEV;
+    }
+   else if( (!strcmp(sensor_name,"ov5648_sw"))&&(otp_id==6))
+   {
+   pr_err("L5251 ov5648 sunwin Success match =%d\n",otp_id); 
+   }
+   else if( (!strcmp(sensor_name,"ov5648_sw"))&&(otp_id==5))
+   {
+   pr_err("L5251 ov5648 sunwin fail match =%d\n",otp_id); 
+   return -ENODEV;
+   }
+   	
+}
+#endif
 	return rc;
 }
 
@@ -1602,7 +1681,26 @@ int msm_sensor_i2c_probe(struct i2c_client *client,
 		return rc;
 	}
 
-	CDBG("%s %s probe succeeded\n", __func__, client->name);
+	printk("YC %s %s probe succeeded\n", __func__, client->name);
+ 
+    #if 0
+	 	printk("YC %s position %d \n", __func__,s_ctrl->sensordata->sensor_info->position);
+
+		if(s_ctrl->sensordata->sensor_info->position==0){
+		sprintf(main_des_buf, "%s",client->name);
+		CAREAT_TINNO_DEV_INFO(main_camera);
+		SET_DEVINFO_STR(main_camera,main_des_buf);
+			camera_found_number++;
+		}
+		else if(s_ctrl->sensordata->sensor_info->position==1){
+		sprintf(sub_des_buf, "%s",client->name);
+		CAREAT_TINNO_DEV_INFO(sub_camera);
+		SET_DEVINFO_STR(sub_camera,sub_des_buf);
+			camera_found_number++;
+		}
+		
+    #endif
+
 	snprintf(s_ctrl->msm_sd.sd.name,
 		sizeof(s_ctrl->msm_sd.sd.name), "%s", id->name);
 	v4l2_i2c_subdev_init(&s_ctrl->msm_sd.sd, client,
