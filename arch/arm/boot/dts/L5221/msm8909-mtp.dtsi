@@ -13,7 +13,47 @@
 #include "msm8909.dtsi"
 #include "msm8909-pinctrl.dtsi"
 #include "msm8909-camera-sensor-mtp.dtsi"
+&tlmm_pinmux {
+	bma2x2_int1_pin {
+		qcom,pins = <&gp 96>;
+		qcom,num-grp-pins = <1>;
+		label = "bma2x2_int1_pin";
+		bma2x2_int1_default: int1_default {
+			  drive-strength = <6>;
+			  bias-pull-up;
+		};
+		bma2x2_int1_sleep: int1_sleep {
+			  drive-strength = <2>;
+			  bias-pull-down;
+		};
+	};
 
+	akm_reset_pin {
+		qcom,pins = <&gp 36>;
+		qcom,pin-func = <0>;
+		qcom,num-grp-pins = <1>;
+		label = "akm_reset_pin";
+		akm_default: akm_default {
+			drive-strength = <6>;
+			bias-pull-up;
+		};
+		akm_sleep: akm_sleep {
+			drive-strength = <2>;
+			bias-pull-down;
+		};
+	};
+	
+	hall_int_pin {
+		qcom,pins = <&gp 65>;
+		qcom,pin-func = <0>;
+		qcom,num-grp-pins = <1>;
+		label = "hall-irq";
+		hall_sensor_int_default: hall_sensor_int_default {
+			drive-strength = <6>;
+			bias-pull-up;
+		};
+	};
+};
 &soc {
 	/*
 	 * DT node to add support for SMB135x charger and integrate
@@ -289,6 +329,18 @@ AA 00 00 00 23 20 30 00 00 00 05 01 00 00 00 00 04 04 06 06
 			linux,default-trigger = "none";
 		};
 	};
+	hall {
+		compatible = "hall-switch";
+		pinctrl-names = "default";
+		pinctrl-0 = <&hall_sensor_int_default>;
+		interrupt-parent = <&msm_gpio>;
+		interrupts = <65 0x2003>;
+		vddio-supply = <&pm8909_l6>;
+		linux,gpio-int = <&msm_gpio 65 0x1>;
+		linux,wakeup;
+		linux,min-uv = <1650000>;
+		linux,max-uv = <3300000>;
+	};
 };
 
 &blsp1_uart1 {
@@ -374,110 +426,59 @@ AA 00 00 00 23 20 30 00 00 00 05 01 00 00 00 00 04 04 06 06
 	status = "ok";
 };
 
-&tlmm_pinmux {
-	mpu6050_int_pin {
-		qcom,pins = <&gp 96>;
-		qcom,pin-func = <0>;
-		qcom,num-grp-pins = <1>;
-		label = "mpu6050-irq";
-		mpu6050_default: mpu6050_default {
-			drive-strength = <6>;
-			bias-pull-down;
-		};
-		mpu6050_sleep: mpu6050_sleep {
-			drive-strength = <2>;
-			bias-pull-down;
-		};
-	};
-
-	apds99xx_int_pin {
-		qcom,pins = <&gp 94>;
-		qcom,pin-func = <0>;
-		qcom,num-grp-pins = <1>;
-		label = "apds99xx-irq";
-		apds99xx_default: apds99xx_default {
-			drive-strength = <6>;
-			bias-pull-up;
-		};
-		apds99xx_sleep: apds99xx_sleep {
-			drive-strength = <2>;
-			bias-pull-down;
-		};
-	};
-
-	ak8963_int_pin {
-		qcom,pins = <&gp 65>;
-		qcom,pin-func = <0>;
-		qcom,num-grp-pins = <1>;
-		label = "ak8963-irq";
-		ak8963_default: ak8963_default {
-			drive-strength = <6>;
-			bias-pull-up;
-		};
-		ak8963_sleep: ak8963_sleep {
-			drive-strength = <2>;
-			bias-pull-down;
-		};
-	};
-};
-
 &i2c_1 { /* BLSP1 QUP1 */
-	mpu6050@68 { /* Gyroscope and accelerometer sensor combo */
-		compatible = "invn,mpu6050";
-		reg = <0x68>;
-		pinctrl-names = "mpu_default","mpu_sleep";
-		pinctrl-0 = <&mpu6050_default>;
-		pinctrl-1 = <&mpu6050_sleep>;
+	bosch@18 { /* Accelerometer sensor */
+		compatible = "bosch,bma2x2";
+		reg = <0x18>;
+		pinctrl-names = "bma_default","bma_sleep";
+		pinctrl-0 = <&bma2x2_int1_default>;
+		pinctrl-1 = <&bma2x2_int1_sleep >;
 		interrupt-parent = <&msm_gpio>;
-		interrupts = <96 0x1>;
-		vdd-supply = <&pm8909_l17>;
-		vlogic-supply = <&pm8909_l6>;
-		invn,gpio-int = <&msm_gpio 96 0x1>;
-		invn,place = "Portrait Down Back Side";
-	};
-
-	avago@39 { /* Ambient light and proximity sensor */
-		compatible = "avago,apds9900";
-		reg = <0x39>;
-		pinctrl-names = "default","sleep";
-		pinctrl-0 = <&apds99xx_default>;
-		pinctrl-1 = <&apds99xx_sleep>;
-		interrupt-parent = <&msm_gpio>;
-		interrupts = <94 0x2002>;
+		interrupts = <96 0x2002>;
 		vdd-supply = <&pm8909_l17>;
 		vio-supply = <&pm8909_l6>;
-		avago,irq-gpio = <&msm_gpio 94 0x2002>;
-		avago,ps-threshold = <600>;
-		avago,ps-hysteresis-threshold = <500>;
-		avago,ps-pulse = <8>;
-		avago,ps-pgain = <0>;
-		avago,als-B = <186>;
-		avago,als-C = <75>;
-		avago,als-D = <129>;
-		avago,ga-value = <256>;
+		bosch,init-interval = <200>;
+		bosch,place = <0x6>;
+		bosch,gpio-int1 = <&msm_gpio 96 0x2002>;
 	};
 
-	memsic@30 { /* Magnetic field sensor */
-		compatible = "memsic,mmc3416x";
-		reg = <0x30>;
+	stk@48 { /* Ambient light and proximity sensor */
+		compatible = "stk,stk3x1x";
+		reg = <0x48>;
+		interrupt-parent = <&msm_gpio>;
+		interrupts = <94 0x2>;
 		vdd-supply = <&pm8909_l17>;
 		vio-supply = <&pm8909_l6>;
-		memsic,dir = "obverse-x-axis-forward";
-		memsic,auto-report;
+		stk,irq-gpio = <&msm_gpio 94 0x02>;
+		stk,transmittance = <500>;
+		stk,state-reg = <0x00>;
+		stk,psctrl-reg = <0x31>;
+		stk,alsctrl-reg = <0x3A>;
+		stk,ledctrl-reg = <0xff>;
+		stk,wait-reg = <0x07>;
+		stk,ps-thdh = <55>;
+		stk,ps-thdl = <40>;
+		stk,use-fir;
 	};
 
 	akm@c { /* Magnetic field sensor */
-		compatible = "ak,ak8963";
+		compatible = "ak,ak09911";
 		reg = <0x0c>;
-		pinctrl-names = "ak8963_default", "ak8963_sleep";
-		pinctrl-0 = <&ak8963_default>;
-		pinctrl-1 = <&ak8963_sleep>;
-		interrupt-parent = <&msm_gpio>;
-		interrupts = <65 0x2>;
+		pinctrl-names = "default","sleep";
+		pinctrl-0 = <&akm_default>;
+		pinctrl-1 = <&akm_sleep>;
 		vdd-supply = <&pm8909_l17>;
 		vio-supply = <&pm8909_l6>;
-		ak,layout = <0x6>;
-		ak,auto-report;
+		akm,layout = <0x5>;
+		akm,gpio_rstn = <&msm_gpio 36 0x0>;
+		akm,auto-report;
+	};
+	bmg@68 { /* GYROSCOPE sensor */
+		compatible = "bosch,bmg160";
+		reg = <0x68>;
+		vdd-supply = <&pm8909_l17>;
+		vio-supply = <&pm8909_l6>;
+		bosch,place = <0x03>;
 	};
 };
 
