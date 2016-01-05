@@ -113,6 +113,8 @@ void mmc_fixup_device(struct mmc_card *card, const struct mmc_fixup *table)
 	if (!table)
 		table = mmc_fixup_methods;
 
+        dev_info(&card->dev, "manfid 0x%x oemid 0x%x\n",card->cid.manfid,card->cid.oemid);//Tinno:CJ
+
 	for (f = table; f->vendor_fixup; f++) {
 		if ((f->manfid == CID_MANFID_ANY ||
 		     f->manfid == card->cid.manfid) &&
@@ -128,7 +130,7 @@ void mmc_fixup_device(struct mmc_card *card, const struct mmc_fixup *table)
 		    (f->cis_device == card->cis.device ||
 		     f->cis_device == (u16) SDIO_ANY_ID) &&
 		    rev >= f->rev_start && rev <= f->rev_end) {
-			dev_dbg(&card->dev, "calling %pF\n", f->vendor_fixup);
+			dev_info(&card->dev, "calling %s %pF(%x) %d\n",f->name, f->vendor_fixup,f->data,card->type); //Tinno:CJ
 			f->vendor_fixup(card, f->data);
 		}
 	}
