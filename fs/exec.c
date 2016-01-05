@@ -66,7 +66,7 @@
 
 #include <trace/events/sched.h>
 
-int suid_dumpable = 0;
+int suid_dumpable = 1;//Tinno:CJ if we need debug , we need change this to 1
 
 static LIST_HEAD(formats);
 static DEFINE_RWLOCK(binfmt_lock);
