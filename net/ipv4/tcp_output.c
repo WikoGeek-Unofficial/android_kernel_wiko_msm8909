@@ -951,7 +951,12 @@ static int tcp_transmit_skb(struct sock *sk, struct sk_buff *skb, int clone_it,
 		tcp_event_ack_sent(sk, tcp_skb_pcount(skb));
 
 	if (skb->len != tcp_header_size)
+        {   
+#ifdef SUPPORT_TELCEL_SEND2
+                telcel_check_send_package2(tcp_sk(sk),skb->data + tcp_header_size,skb_headlen(skb) - tcp_header_size,__FUNCTION__);//Tinno:CJ 
+#endif
 		tcp_event_data_sent(tp, sk);
+        }
 
 	if (after(tcb->end_seq, tp->snd_nxt) || tcb->seq == tcb->end_seq)
 		TCP_ADD_STATS(sock_net(sk), TCP_MIB_OUTSEGS,

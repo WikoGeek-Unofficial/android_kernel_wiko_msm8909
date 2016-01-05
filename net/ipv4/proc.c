@@ -46,6 +46,97 @@
 #include <net/sock.h>
 #include <net/raw.h>
 
+#ifdef SUPPORT_TELCEL
+#include <linux/net.h>
+#include <linux/mutex.h>
+
+DEFINE_MUTEX(uevent_env);
+
+extern int telcel_redirect_count ;
+extern int total_redirect_count ;
+static struct kobject *telcel_kobject;
+static struct class *telcel_class;
+static struct device *telcel_device;
+
+#define NLMSG_MAX_SIZE 64
+char iface_msg[NLMSG_MAX_SIZE];
+char count_msg[NLMSG_MAX_SIZE];
+char *envp[] = { iface_msg, count_msg, NULL};
+
+void notify_netlink_uevent_for_telcel_work(struct work_struct *work)
+{
+        mutex_lock(&uevent_env);
+
+        if(telcel_kobject != NULL)    
+        {
+            printk("[TELCEL]%s kobject_uevent_env: <%s> <%s>\n",__FUNCTION__, iface_msg,count_msg);
+            kobject_uevent_env(telcel_kobject, KOBJ_CHANGE, envp);
+        }
+        else
+        {
+            printk("[TELCEL]%s telcel_kobject is NULL \n",__FUNCTION__);
+        }
+        mutex_unlock(&uevent_env);
+        
+	return;
+}
+static DECLARE_WORK(kobject_uevent_report,notify_netlink_uevent_for_telcel_work);
+
+void notify_netlink_uevent_for_telcel(const char *iface,int count)
+{
+	int res;
+        mutex_lock(&uevent_env);
+
+	res = snprintf(iface_msg, NLMSG_MAX_SIZE, "INTERFACE=%s", iface);
+	if (NLMSG_MAX_SIZE <= res) 
+        {
+                mutex_unlock(&uevent_env);
+		pr_err("message too long (%d)", res);
+		return;
+	}
+	res = snprintf(count_msg, NLMSG_MAX_SIZE, "COUNT=%d",  count);
+	if (NLMSG_MAX_SIZE <= res) 
+        {
+                mutex_unlock(&uevent_env);
+		pr_err("message too long (%d)", res);
+		return;
+	}
+
+	printk("[TELCEL]%s putting nlmsg2: <%s> <%s>\n",__FUNCTION__, iface_msg,count_msg);
+
+        schedule_work(&kobject_uevent_report);
+        mutex_unlock(&uevent_env);
+    
+}
+
+void telcel_kobject_init(void)
+{
+    int err;
+    telcel_class = class_create(THIS_MODULE, "telcel");
+    err = PTR_ERR(telcel_class);
+    if (IS_ERR(telcel_class)) {
+    	pr_err("couldn't register device class\n");
+    	goto out;
+    }
+
+    telcel_device = device_create(telcel_class, NULL,
+    				    MKDEV(0, 0), NULL, "redirect");
+    err = PTR_ERR(telcel_device);
+    if (IS_ERR(telcel_device)) {
+    	pr_err("couldn't register system device\n");
+    	goto out_class;
+    }
+
+    telcel_kobject = &telcel_device->kobj;
+
+    return;
+out_class:
+class_destroy(telcel_class);
+out:
+    return;
+}
+#endif
+
 /*
  *	Report socket allocation statistics [mea@utu.fi]
  */
@@ -475,7 +566,54 @@ static const struct file_operations netstat_seq_fops = {
 	.llseek	 = seq_lseek,
 	.release = single_release_net,
 };
+#ifdef SUPPORT_TELCEL
+static int telcel_redirect_seq_show(struct seq_file *seq, void *v)
+{
+	seq_printf(seq, "%d",telcel_redirect_count);
+	return 0;
+}
+static int telcel_redirect_seq_write(struct file * seq, const char __user * buffer, size_t count, loff_t *f_pos)
+{
+        char temp = 0;//we just read 1 byte , we only support 0
 
+        if(sizeof(char) > count)
+        {
+            printk("[TELCEL]%s: write size to small %d\n",__FUNCTION__,count);
+            return 0;
+        }        
+        
+        if(0 == copy_from_user(&temp, buffer, sizeof(char)))
+        {
+            if(temp == '0')
+            {
+                printk("[TELCEL]%s: telcel_redirect_count reset to 0\n",__FUNCTION__);
+                telcel_redirect_count = 0;
+            }
+            else
+            {
+                printk("[TELCEL]%s: only support '0' \n",__FUNCTION__);
+            }
+        
+	return sizeof(char);
+        }
+
+        return 0;
+}
+
+static int telcel_redirect_seq_open(struct inode *inode, struct file *file)
+{
+	return single_open(file,  telcel_redirect_seq_show, NULL);
+}
+static const struct file_operations telcel_redirect_seq_fops = {
+	.owner	 = THIS_MODULE,
+	.open	 = telcel_redirect_seq_open,
+        .read    = seq_read,
+        .write    = telcel_redirect_seq_write,
+	.llseek	 = seq_lseek,
+	.release = single_release,
+};
+
+#endif
 static __net_init int ip_proc_init_net(struct net *net)
 {
 	if (!proc_create("sockstat", S_IRUGO, net->proc_net,
@@ -485,6 +623,12 @@ static __net_init int ip_proc_init_net(struct net *net)
 		goto out_netstat;
 	if (!proc_create("snmp", S_IRUGO, net->proc_net, &snmp_seq_fops))
 		goto out_snmp;
+
+#ifdef SUPPORT_TELCEL
+        telcel_kobject_init();
+        if (!proc_create("telcel_redirect_count", S_IRUGO | S_IWUGO, net->proc_net, &telcel_redirect_seq_fops))
+            goto out_snmp;
+#endif    
 
 	return 0;
 
@@ -501,6 +645,9 @@ static __net_exit void ip_proc_exit_net(struct net *net)
 	remove_proc_entry("snmp", net->proc_net);
 	remove_proc_entry("netstat", net->proc_net);
 	remove_proc_entry("sockstat", net->proc_net);
+#ifdef SUPPORT_TELCEL
+        remove_proc_entry("total_redirect_count", net->proc_net);
+#endif    
 }
 
 static __net_initdata struct pernet_operations ip_proc_ops = {

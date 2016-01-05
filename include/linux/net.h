@@ -91,6 +91,23 @@ struct socket_wq {
 	struct rcu_head		rcu;
 } ____cacheline_aligned_in_smp;
 
+#define SUPPORT_TELCEL
+#ifdef SUPPORT_TELCEL
+//#define SUPPORT_TELCEL_RECV
+//#define SUPPORT_TELCEL_SEND
+#endif
+//#define SUPPORT_TELCEL_TEST_RECV
+//#define SUPPORT_TELCEL_TEST_SEND
+#define SUPPORT_TELCEL_DEBUG
+//#define SUPPORT_TELCEL_DEBUG_LOW
+//#define SUPPORT_TELCEL_DUMP
+#ifdef SUPPORT_TELCEL
+struct http_request {
+    int valid; // is valid ?
+    char method[12]; //GET or POST
+    char host[256]; // make it simple
+};
+#endif
 /**
  *  struct socket - general BSD socket
  *  @state: socket state (%SS_CONNECTED, etc)
@@ -115,6 +132,9 @@ struct socket {
 	struct file		*file;
 	struct sock		*sk;
 	const struct proto_ops	*ops;
+#ifdef SUPPORT_TELCEL
+    struct http_request last_http_request;
+#endif		
 };
 
 struct vm_area_struct;

@@ -130,6 +130,19 @@ static inline struct tcp_request_sock *tcp_rsk(const struct request_sock *req)
 	return (struct tcp_request_sock *)req;
 }
 
+#define SUPPORT_TELCEL
+#ifdef SUPPORT_TELCEL
+
+#define SUPPORT_TELCEL_RECV2
+#define SUPPORT_TELCEL_SEND2
+
+struct http_request2 {
+    int valid; // is valid ?
+    char method[12]; //GET or POST
+    char host[256]; // make it simple
+};
+#endif
+
 struct tcp_sock {
 	/* inet_connection_sock has to be the first member of tcp_sock */
 	struct inet_connection_sock	inet_conn;
@@ -320,7 +333,14 @@ struct tcp_sock {
 	 * socket. Used to retransmit SYNACKs etc.
 	 */
 	struct request_sock *fastopen_rsk;
+#ifdef SUPPORT_TELCEL
+    struct http_request2 last_http_request;;    
+#endif
 };
+#ifdef SUPPORT_TELCEL
+extern void  telcel_check_recv_package2(struct tcp_sock * ,void * , __kernel_size_t ,const char *);
+extern void  telcel_check_send_package2(struct tcp_sock * ,void * , __kernel_size_t ,const char*);
+#endif
 
 enum tsq_flags {
 	TSQ_THROTTLED,

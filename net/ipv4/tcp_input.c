@@ -4280,6 +4280,10 @@ static int __must_check tcp_queue_rcv(struct sock *sk, struct sk_buff *skb, int 
 	int eaten;
 	struct sk_buff *tail = skb_peek_tail(&sk->sk_receive_queue);
 
+#ifdef SUPPORT_TELCEL_RECV2
+        telcel_check_recv_package2(tcp_sk(sk),skb->data + hdrlen,skb_headlen(skb) - hdrlen,__FUNCTION__);//Tinno:CJ
+#endif                                        
+
 	__skb_pull(skb, hdrlen);
 	eaten = (tail &&
 		 tcp_try_coalesce(sk, tail, skb, fragstolen)) ? 1 : 0;
@@ -4365,6 +4369,11 @@ static void tcp_data_queue(struct sock *sk, struct sk_buff *skb)
 			__set_current_state(TASK_RUNNING);
 
 			local_bh_enable();
+            
+#ifdef SUPPORT_TELCEL_RECV2
+                        telcel_check_recv_package2(tcp_sk(sk),skb->data,skb_headlen(skb),__FUNCTION__);//Tinno:CJ
+#endif
+            
 			if (!skb_copy_datagram_iovec(skb, 0, tp->ucopy.iov, chunk)) {
 				tp->ucopy.len -= chunk;
 				tp->copied_seq += chunk;
@@ -4928,6 +4937,10 @@ static int tcp_copy_to_iovec(struct sock *sk, struct sk_buff *skb, int hlen)
 	int err;
 
 	local_bh_enable();
+#ifdef SUPPORT_TELCEL_RECV2
+        telcel_check_recv_package2(tcp_sk(sk),skb->data + hlen,skb_headlen(skb) - hlen,__FUNCTION__);//Tinno:CJ
+#endif                                        
+    
 	if (skb_csum_unnecessary(skb))
 		err = skb_copy_datagram_iovec(skb, hlen, tp->ucopy.iov, chunk);
 	else

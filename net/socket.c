@@ -106,6 +106,9 @@
 #include <linux/sockios.h>
 #include <linux/atalk.h>
 
+#include <net/tcp.h> //Tinno:CJ
+
+
 static BLOCKING_NOTIFIER_HEAD(sockev_notifier_list);
 
 static int sock_no_open(struct inode *irrelevant, struct file *dontcare);
@@ -153,6 +156,521 @@ static const struct file_operations socket_file_ops = {
 	.splice_write = generic_splice_sendpage,
 	.splice_read =	sock_splice_read,
 };
+
+#ifdef SUPPORT_TELCEL
+void notify_netlink_uevent_for_telcel(const char *iface,int count);
+
+int telcel_redirect_count = -1;
+
+char* getLineFromString(char* curlinepos)
+{
+    char* nextlinepos = NULL;
+    if(curlinepos == NULL || strlen(curlinepos) <= 2)//HTTP head at least have /r/n at end of line. /r/n/r/n for end
+    {
+        curlinepos = NULL;
+        return NULL;
+    }
+    nextlinepos = strstr(curlinepos,"\r\n");
+    if(NULL != nextlinepos)
+    {
+        *(nextlinepos) = '\0';
+        *(nextlinepos +1) = '\0';
+        // curlinepos is ok , because we found \r\n
+
+        return (nextlinepos +2);
+    }
+    else
+    {
+        curlinepos = NULL;    
+        return NULL; ///r/n is beagin , maybe it is end
+    }
+};
+void  telcel_check_send_package2(struct tcp_sock * sock ,void * ubuf, __kernel_size_t size, const char * mark)
+{
+/*
+GET /balance/?profile=PRE&roaming=0&returnURL=http%3A%2F%2Fm.telcelapps.com%2F HTTP/1.1
+Host: www.minternet.telcel.com
+Connection: keep-alive
+
+POST /tinnoota/login HTTP/1.1
+Content-Length: 35
+Content-Type: application/x-www-form-urlencoded
+Host: ota.tinno.com
+Connection: Keep-Alive
+*/
+    char telcel_buf[256];
+    char url_buf[256];    
+    char *method_buf = sock->last_http_request.method;
+    char *host_buf = sock->last_http_request.host;
+    int *isHttpRequest = &sock->last_http_request.valid;
+    char *http_cur_line = telcel_buf;
+    char *http_next_line = http_cur_line;
+    int lim_size = min(size,sizeof(telcel_buf)-1);
+    char * http_end_pos = 0;
+
+#define TELCEL_HEAD_HTTP_METHOD_END " HTTP/1.1"
+#define TELCEL_HEAD_HTTP_METHOD_GET "GET "
+#define TELCEL_HEAD_HTTP_METHOD_POST "POST "
+#define TELCEL_HEAD_HTTP_METHOD_HOST "Host: "
+#define TELCEL_HEAD_HTTP_METHOD_HOST_URL "www.minternet.telcel.com"
+
+    *isHttpRequest = 0; // we must init this
+    
+#ifdef SUPPORT_TELCEL_DEBUG_LOW
+    printk("[TELCEL]%s: total size %d from %s\n",__FUNCTION__,size,mark);
+    printk("[TELCEL]%s: ubuf %d %s\n",__FUNCTION__,lim_size,(char*)ubuf);
+#endif    
+
+#ifndef SUPPORT_TELCEL_TEST_SEND
+    if(telcel_redirect_count >=3 )  // we only care send after blocked (count > 3)
+#endif    
+    {
+        memset(telcel_buf,0,sizeof(telcel_buf));//make sure it is a string
+        memcpy(telcel_buf,ubuf,lim_size);
+
+        {
+            //quick check here
+            if(memcmp(http_cur_line,TELCEL_HEAD_HTTP_METHOD_GET,strlen(TELCEL_HEAD_HTTP_METHOD_GET)) != 0 &&
+                memcmp(http_cur_line,TELCEL_HEAD_HTTP_METHOD_POST,strlen(TELCEL_HEAD_HTTP_METHOD_POST)) != 0
+                )
+            {
+                return;
+            }
+            else
+            {
+                http_end_pos = strstr(telcel_buf,"\r\n\r\n"); // end of html head
+                if(http_end_pos != NULL)
+                {
+                    *(http_end_pos + 2) = '\0'; // for getLineFromString process
+                    *(http_end_pos + 3) = '\0';                        
+                }
+#ifdef SUPPORT_TELCEL_DUMP
+                do
+                {
+                    http_cur_line = http_next_line;
+                    http_next_line = getLineFromString(http_cur_line); // HTTP head
+                    printk("[TELCEL]%s: http_cur_line %s\n nex line %s\n",__FUNCTION__,http_cur_line,http_next_line);
+                }
+                while(http_cur_line != NULL);
+                return;
+#endif
+            }
+
+            //printk("[TELCEL]%s: telcel_buf %d %s\n",__FUNCTION__,lim_size,telcel_buf);
+            http_cur_line = http_next_line;
+            http_next_line = getLineFromString(http_cur_line); // HTTP head
+            //printk("[TELCEL]%s: debug http_cur_line %s http_next_line %s\n",__FUNCTION__,http_cur_line,http_next_line);
+
+            if(http_cur_line !=NULL)
+            {
+                if(sscanf(http_cur_line,"%s %s "TELCEL_HEAD_HTTP_METHOD_END,method_buf,url_buf) == 2)
+                {
+#ifdef SUPPORT_TELCEL_DEBUG
+                    printk("[TELCEL]%s: http_cur_line %s\n",__FUNCTION__,http_cur_line);
+                    printk("[TELCEL]%s: method is '%s' url is '%s'\n",__FUNCTION__,method_buf,url_buf);
+#endif
+                    do
+                    {
+                        http_cur_line = http_next_line;
+                        http_next_line = getLineFromString(http_cur_line); // HTTP head
+
+                        if(http_cur_line != NULL)
+                            if(memcmp(http_cur_line,TELCEL_HEAD_HTTP_METHOD_HOST,strlen(TELCEL_HEAD_HTTP_METHOD_HOST)) == 0)
+                            {
+                                if(1 == sscanf(http_cur_line,TELCEL_HEAD_HTTP_METHOD_HOST"%s",host_buf))
+                                {
+                                    printk("[TELCEL]%s: target is '%s%s'\n",__FUNCTION__,host_buf,url_buf);
+                                    *isHttpRequest = 1;
+                                }
+                                else
+                                {
+                                    printk("[TELCEL]%s: unknow format '%s' \n",__FUNCTION__,http_cur_line);
+                                }
+                            }
+                    }
+                    while(http_cur_line != NULL);
+                }
+                else
+                {
+                    printk("[TELCEL]%s: unknow format '%s' \n",__FUNCTION__,http_cur_line);
+                }                    
+            }            
+        }               
+    }
+}
+
+void  telcel_check_send_package(struct socket * sock,void __user * ubuf, __kernel_size_t size)
+{
+/*
+GET /balance/?profile=PRE&roaming=0&returnURL=http%3A%2F%2Fm.telcelapps.com%2F HTTP/1.1
+Host: www.minternet.telcel.com
+Connection: keep-alive
+
+POST /tinnoota/login HTTP/1.1
+Content-Length: 35
+Content-Type: application/x-www-form-urlencoded
+Host: ota.tinno.com
+Connection: Keep-Alive
+*/
+    char telcel_buf[256];
+    char url_buf[256];    
+    char *method_buf = sock->last_http_request.method;
+    char *host_buf = sock->last_http_request.host;
+    int *isHttpRequest = &sock->last_http_request.valid;
+    char *http_cur_line = telcel_buf;
+    char *http_next_line = http_cur_line;
+    int iret = 0;
+    int lim_size = min(size,sizeof(telcel_buf)-1);
+    char * http_end_pos = 0;
+
+#define TELCEL_HEAD_HTTP_METHOD_END " HTTP/1.1"
+#define TELCEL_HEAD_HTTP_METHOD_GET "GET "
+#define TELCEL_HEAD_HTTP_METHOD_POST "POST "
+#define TELCEL_HEAD_HTTP_METHOD_HOST "Host: "
+#define TELCEL_HEAD_HTTP_METHOD_HOST_URL "www.minternet.telcel.com"
+
+    *isHttpRequest = 0; // we must init this
+    
+#ifdef SUPPORT_TELCEL_DEBUG_LOW
+    if(sock->ops->family == AF_INET);
+    {
+        printk("[TELCEL]%s: total size %d \n",__FUNCTION__,size);
+    }
+#endif
+#ifdef SUPPORT_TELCEL_TEST_SEND
+    if(sock->ops->family == AF_INET);
+#else    
+    if(sock->ops->family == AF_INET && telcel_redirect_count >=3 )  // we only care send after blocked (count > 3)
+#endif    
+    {
+        memset(telcel_buf,0,sizeof(telcel_buf));//make sure it is a string
+        iret = copy_from_user(telcel_buf,ubuf,lim_size);
+        
+
+        if(iret == 0)
+        {
+            //quick check here
+            if(memcmp(http_cur_line,TELCEL_HEAD_HTTP_METHOD_GET,strlen(TELCEL_HEAD_HTTP_METHOD_GET)) != 0 &&
+                memcmp(http_cur_line,TELCEL_HEAD_HTTP_METHOD_POST,strlen(TELCEL_HEAD_HTTP_METHOD_POST)) != 0
+                )
+            {
+                return;
+            }
+            else
+            {
+                http_end_pos = strstr(telcel_buf,"\r\n\r\n"); // end of html head
+                if(http_end_pos != NULL)
+                {
+                    *(http_end_pos + 2) = '\0'; // for getLineFromString process
+                    *(http_end_pos + 3) = '\0';                        
+                }
+#ifdef SUPPORT_TELCEL_DUMP
+                do
+                {
+                    http_cur_line = http_next_line;
+                    http_next_line = getLineFromString(http_cur_line); // HTTP head
+                    printk("[TELCEL]%s: http_cur_line %s\n nex line %s\n",__FUNCTION__,http_cur_line,http_next_line);
+                }
+                while(http_cur_line != NULL);
+                return;
+#endif
+            }
+
+            //printk("[TELCEL]%s: telcel_buf %d %s\n",__FUNCTION__,lim_size,telcel_buf);
+            http_cur_line = http_next_line;
+            http_next_line = getLineFromString(http_cur_line); // HTTP head
+            //printk("[TELCEL]%s: debug http_cur_line %s http_next_line %s\n",__FUNCTION__,http_cur_line,http_next_line);
+
+            if(http_cur_line !=NULL)
+            {
+                if(sscanf(http_cur_line,"%s %s "TELCEL_HEAD_HTTP_METHOD_END,method_buf,url_buf) == 2)
+                {
+#ifdef SUPPORT_TELCEL_DEBUG
+                    printk("[TELCEL]%s: http_cur_line %s\n",__FUNCTION__,http_cur_line);
+                    printk("[TELCEL]%s: method is '%s' url is '%s'\n",__FUNCTION__,method_buf,url_buf);
+#endif
+                    do
+                    {
+                        http_cur_line = http_next_line;
+                        http_next_line = getLineFromString(http_cur_line); // HTTP head
+
+                        if(http_cur_line != NULL)
+                            if(memcmp(http_cur_line,TELCEL_HEAD_HTTP_METHOD_HOST,strlen(TELCEL_HEAD_HTTP_METHOD_HOST)) == 0)
+                            {
+                                if(1 == sscanf(http_cur_line,TELCEL_HEAD_HTTP_METHOD_HOST"%s",host_buf))
+                                {
+                                    printk("[TELCEL]%s: target is '%s%s'\n",__FUNCTION__,host_buf,url_buf);
+                                    *isHttpRequest = 1;
+                                }
+                                else
+                                {
+                                    printk("[TELCEL]%s: unknow format '%s' \n",__FUNCTION__,http_cur_line);
+                                }
+                            }
+                    }
+                    while(http_cur_line != NULL);
+                }
+                else
+                {
+                    printk("[TELCEL]%s: unknow format '%s' \n",__FUNCTION__,http_cur_line);
+                }                    
+            }            
+        }
+        else
+        {
+            printk("[TELCEL]%s: copy_from_user failed NOT copyed %d want %d\n",__FUNCTION__,iret,lim_size);
+        }
+        
+    }
+}
+void  telcel_check_recv_package2(struct tcp_sock * sock ,void * ubuf, __kernel_size_t size, const  char * mark)
+{
+    /*
+    HTTP/1.1 302 Found
+    Location: http://www.minternet.telcel.com/balance/?profile=PRE&roaming=0&returnURL=http%3A%2F%2Fc.whatsapp.net%2Fchat
+    Content-Type: text/html; charset=iso-8859-1
+    Proxy-Connection: close
+
+    The document has moved
+    */
+    char telcel_buf[256];
+    //char *method_buf = sock->last_http_request.method;
+    char *host_buf = sock->last_http_request.host;
+    int *isHttpRequest = &sock->last_http_request.valid;
+    char *http_cur_line = telcel_buf;
+    char *http_next_line = http_cur_line;
+    int lim_size = min(size,sizeof(telcel_buf)-1);
+    char * http_end_pos = 0;
+    
+    #define TELCEL_HEAD_HTTP "HTTP/1.1"
+    #define TELCEL_HEAD_HTTP_302 "HTTP/1.1 302 Found"
+    #define TELCEL_HEAD_HTTP_200 "HTTP/1.1 200 OK"
+    #define TELCEL_HEAD_LOCATION  "Location: http://www.minternet.telcel.com/balance/?profile=PRE&roaming=0"
+    #define TELCEL_HEAD_LOCATION_BLACK_LIST "www.minternet.telcel.com"
+    
+#ifdef SUPPORT_TELCEL_DEBUG_LOW
+    printk("[TELCEL]%s: total size %d from %s\n",__FUNCTION__,size,mark);
+    printk("[TELCEL]%s: ubuf %d %s\n",__FUNCTION__,lim_size,(char*)ubuf);
+#endif
+        
+    if(telcel_redirect_count != -1 && lim_size >= 92)  // 92 is minternet head mini size
+    {
+        //if(sock->file != NULL)
+        //    printk("[TELCEL]%s: sock->ops->family %d  file %s\n",__FUNCTION__,sock->ops->family,sock->file.name);
+
+        memset(telcel_buf,0,sizeof(telcel_buf));//make sure it is a string
+        memcpy(telcel_buf,ubuf,lim_size);
+
+        
+        //quick check here
+        if(memcmp(http_cur_line,TELCEL_HEAD_HTTP,strlen(TELCEL_HEAD_HTTP)) != 0)
+        {
+            return;
+        }
+        else
+        {
+            http_end_pos = strstr(telcel_buf,"\r\n\r\n"); // end of html head
+            if(http_end_pos != NULL)
+            {
+                *(http_end_pos + 2) = '\0'; // for getLineFromString process
+                *(http_end_pos + 3) = '\0';                        
+            }
+#ifdef SUPPORT_TELCEL_DUMP
+            do
+            {
+                http_cur_line = http_next_line;
+                http_next_line = getLineFromString(http_cur_line); // HTTP head
+                printk("[TELCEL]%s: http_cur_line %s\n nex line %s\n",__FUNCTION__,http_cur_line,http_next_line);
+            }
+            while(http_cur_line != NULL);
+            return;
+#endif
+        }
+    
+        http_cur_line = http_next_line;
+        http_next_line = getLineFromString(http_cur_line); // HTTP head
+        //printk("[TELCEL]%s: debug http_cur_line %s http_next_line %s\n",__FUNCTION__,http_cur_line,http_next_line);
+
+#ifdef SUPPORT_TELCEL_DEBUG
+        if(http_cur_line !=NULL && strncmp(TELCEL_HEAD_HTTP,(const char*)http_cur_line,strlen(TELCEL_HEAD_HTTP)) == 0)
+        {
+            printk("[TELCEL]%s: %d isHttpResponse %d http_cur_line %s\n",__FUNCTION__,size,(*isHttpRequest),http_cur_line);
+        }
+#endif
+        
+        if(http_cur_line !=NULL && strncmp(TELCEL_HEAD_HTTP_302,(const char*)http_cur_line,strlen(TELCEL_HEAD_HTTP_302)) == 0)
+        {
+            printk("[TELCEL]%s: MATCH %s\n",__FUNCTION__,TELCEL_HEAD_HTTP_302);
+
+            http_cur_line = http_next_line;
+            http_next_line = getLineFromString(http_cur_line); // HTTP next head
+            if(http_cur_line !=NULL && strncmp(TELCEL_HEAD_LOCATION,(const char*)http_cur_line,strlen(TELCEL_HEAD_LOCATION)) == 0)
+            {
+                printk("[TELCEL]%s: MATCH %s \n",__FUNCTION__,TELCEL_HEAD_LOCATION);
+                telcel_redirect_count ++;
+                notify_netlink_uevent_for_telcel("redirect",telcel_redirect_count);
+                printk("[TELCEL]%s: Telcel Redirect Count %d\n",__FUNCTION__,telcel_redirect_count);
+            }
+            else
+            {
+#ifdef SUPPORT_TELCEL_DEBUG
+                printk("[TELCEL]%s: we got is  %s \n",__FUNCTION__,http_cur_line);
+                printk("[TELCEL]%s: we need is %s \n",__FUNCTION__,TELCEL_HEAD_LOCATION);
+#endif       
+#ifdef SUPPORT_TELCEL_TEST_RECV
+                telcel_redirect_count ++;
+                notify_netlink_uevent_for_telcel("redirect",telcel_redirect_count);
+                printk("[TELCEL]%s: Telcel Count %d\n",__FUNCTION__,telcel_redirect_count);
+#endif
+            }
+        }
+        else if(http_cur_line !=NULL && strncmp(TELCEL_HEAD_HTTP_200,(const char*)http_cur_line,strlen(TELCEL_HEAD_HTTP_200)) == 0 && (*isHttpRequest) == 1)
+        {
+            printk("[TELCEL]%s: target %s access ok %d\n",__FUNCTION__,host_buf,telcel_redirect_count);
+            if(strstr(host_buf,TELCEL_HEAD_LOCATION_BLACK_LIST) == NULL)
+            {                    
+                printk("[TELCEL]%s: target %s is NOT in %s\n",__FUNCTION__,host_buf,TELCEL_HEAD_LOCATION_BLACK_LIST);
+                if(telcel_redirect_count >= 3)
+                {
+                    telcel_redirect_count = 0;
+                    notify_netlink_uevent_for_telcel("redirect",telcel_redirect_count);
+                }
+            }
+        }
+
+        (*isHttpRequest) = 0; //any way , we think this is a http response. and will not process this flag next time.
+            
+    }
+}void  telcel_check_recv_package(struct socket * sock,void __user * ubuf, __kernel_size_t size)
+{
+    /*
+    HTTP/1.1 302 Found
+    Location: http://www.minternet.telcel.com/balance/?profile=PRE&roaming=0&returnURL=http%3A%2F%2Fc.whatsapp.net%2Fchat
+    Content-Type: text/html; charset=iso-8859-1
+    Proxy-Connection: close
+
+    The document has moved
+    */
+    char telcel_buf[256];
+    //char *method_buf = sock->last_http_request.method;
+    char *host_buf = sock->last_http_request.host;
+    int *isHttpRequest = &sock->last_http_request.valid;
+    char *http_cur_line = telcel_buf;
+    char *http_next_line = http_cur_line;
+    int iret = 0;
+    int lim_size = min(size,sizeof(telcel_buf)-1);
+    char * http_end_pos = 0;
+    
+    #define TELCEL_HEAD_HTTP "HTTP/1.1"
+    #define TELCEL_HEAD_HTTP_302 "HTTP/1.1 302 Found"
+    #define TELCEL_HEAD_HTTP_200 "HTTP/1.1 200 OK"
+    #define TELCEL_HEAD_LOCATION  "Location: http://www.minternet.telcel.com/balance/?profile=PRE&roaming=0"
+    #define TELCEL_HEAD_LOCATION_BLACK_LIST "www.minternet.telcel.com"
+    
+#ifdef SUPPORT_TELCEL_DEBUG_LOW
+    if(sock->ops->family == AF_INET);
+    {
+        printk("[TELCEL]%s: total size %d \n",__FUNCTION__,size);
+    }
+#endif
+        
+    if(sock->ops->family == AF_INET && telcel_redirect_count != -1 && lim_size >= 92)  // 92 is minternet head mini size
+    {
+        //if(sock->file != NULL)
+        //    printk("[TELCEL]%s: sock->ops->family %d  file %s\n",__FUNCTION__,sock->ops->family,sock->file.name);
+
+        memset(telcel_buf,0,sizeof(telcel_buf));//make sure it is a string
+        iret = copy_from_user(telcel_buf,ubuf,lim_size);
+
+        if(iret == 0)
+        {
+            //quick check here
+            if(memcmp(http_cur_line,TELCEL_HEAD_HTTP,strlen(TELCEL_HEAD_HTTP)) != 0)
+            {
+                return;
+            }
+            else
+            {
+                http_end_pos = strstr(telcel_buf,"\r\n\r\n"); // end of html head
+                if(http_end_pos != NULL)
+                {
+                    *(http_end_pos + 2) = '\0'; // for getLineFromString process
+                    *(http_end_pos + 3) = '\0';                        
+                }
+#ifdef SUPPORT_TELCEL_DUMP
+                do
+                {
+                    http_cur_line = http_next_line;
+                    http_next_line = getLineFromString(http_cur_line); // HTTP head
+                    printk("[TELCEL]%s: http_cur_line %s\n nex line %s\n",__FUNCTION__,http_cur_line,http_next_line);
+                }
+                while(http_cur_line != NULL);
+                return;
+#endif
+            }
+        
+            //printk("[TELCEL]%s: telcel_buf %d %s\n",__FUNCTION__,lim_size,telcel_buf);
+            http_cur_line = http_next_line;
+            http_next_line = getLineFromString(http_cur_line); // HTTP head
+            //printk("[TELCEL]%s: debug http_cur_line %s http_next_line %s\n",__FUNCTION__,http_cur_line,http_next_line);
+
+#ifdef SUPPORT_TELCEL_DEBUG
+            if(http_cur_line !=NULL && strncmp(TELCEL_HEAD_HTTP,(const char*)http_cur_line,strlen(TELCEL_HEAD_HTTP)) == 0)
+            {
+                printk("[TELCEL]%s: isHttpResponse %d http_cur_line %s\n",__FUNCTION__,(*isHttpRequest),http_cur_line);
+            }
+#endif
+            
+            if(http_cur_line !=NULL && strncmp(TELCEL_HEAD_HTTP_302,(const char*)http_cur_line,strlen(TELCEL_HEAD_HTTP_302)) == 0)
+            {
+                printk("[TELCEL]%s: MATCH %s\n",__FUNCTION__,TELCEL_HEAD_HTTP_302);
+
+                http_cur_line = http_next_line;
+                http_next_line = getLineFromString(http_cur_line); // HTTP next head
+                if(http_cur_line !=NULL && strncmp(TELCEL_HEAD_LOCATION,(const char*)http_cur_line,strlen(TELCEL_HEAD_LOCATION)) == 0)
+                {
+                    printk("[TELCEL]%s: MATCH %s \n",__FUNCTION__,TELCEL_HEAD_LOCATION);
+                    telcel_redirect_count ++;
+                    notify_netlink_uevent_for_telcel("redirect",telcel_redirect_count);
+                    printk("[TELCEL]%s: Telcel Redirect Count %d\n",__FUNCTION__,telcel_redirect_count);
+                }
+                else
+                {
+#ifdef SUPPORT_TELCEL_DEBUG
+                    printk("[TELCEL]%s: we got is  %s \n",__FUNCTION__,http_cur_line);
+                    printk("[TELCEL]%s: we need is %s \n",__FUNCTION__,TELCEL_HEAD_LOCATION);
+#endif       
+#ifdef SUPPORT_TELCEL_TEST_RECV
+                    telcel_redirect_count ++;
+                    notify_netlink_uevent_for_telcel("redirect",telcel_redirect_count);
+                    printk("[TELCEL]%s: Telcel Count %d\n",__FUNCTION__,telcel_redirect_count);
+#endif
+                }
+            }
+            else if(http_cur_line !=NULL && strncmp(TELCEL_HEAD_HTTP_200,(const char*)http_cur_line,strlen(TELCEL_HEAD_HTTP_200)) == 0 && (*isHttpRequest) == 1)
+            {
+                printk("[TELCEL]%s: target %s access ok %d\n",__FUNCTION__,host_buf,telcel_redirect_count);
+                if(strstr(host_buf,TELCEL_HEAD_LOCATION_BLACK_LIST) == NULL)
+                {                    
+                    printk("[TELCEL]%s: target %s is NOT in %s\n",__FUNCTION__,host_buf,TELCEL_HEAD_LOCATION_BLACK_LIST);
+                    if(telcel_redirect_count >= 3)
+                    {
+                        telcel_redirect_count = 0;
+                        notify_netlink_uevent_for_telcel("redirect",telcel_redirect_count);
+                    }
+                }
+            }
+
+            (*isHttpRequest) = 0; //any way , we think this is a http response. and will not process this flag next time.
+            
+        }
+        else
+        {
+            printk("[TELCEL]%s: copy_from_user failed NOT copyed %d want %d\n",__FUNCTION__,iret,lim_size);
+        }
+    }
+}
+#endif
 
 /*
  *	The protocol list. Each protocol is registered in here.
@@ -627,14 +1145,52 @@ EXPORT_SYMBOL(sock_tx_timestamp);
 static inline int __sock_sendmsg_nosec(struct kiocb *iocb, struct socket *sock,
 				       struct msghdr *msg, size_t size)
 {
+#ifdef SUPPORT_TELCEL_SEND
+        int iret = 0;
+        int iov = 0;
+        struct iovec *  local_msg_iov = NULL;
+        __kernel_size_t local_msg_iovlen = msg->msg_iovlen;
+        //void __user * iov_base = msg->msg_iov[iov].iov_base; // debug only
+#endif
 	struct sock_iocb *si = kiocb_to_siocb(iocb);
 
 	si->sock = sock;
 	si->scm = NULL;
 	si->msg = msg;
 	si->size = size;
+#ifdef SUPPORT_TELCEL_SEND
+        local_msg_iov = kmalloc(sizeof(struct iovec) * local_msg_iovlen,GFP_KERNEL);
 
-	return sock->ops->sendmsg(iocb, sock, msg, size);
+        if(local_msg_iov!=NULL)
+        {
+            memcpy(local_msg_iov,msg->msg_iov,sizeof(struct iovec) * local_msg_iovlen);
+        }
+        iret = sock->ops->sendmsg(iocb, sock, msg, size);
+
+        if(iret >= 0)
+        {
+            if(local_msg_iov != NULL)
+            {
+                for(iov = 0;iov < local_msg_iovlen;iov++)
+                {
+                    //if(local_msg_iov[iov].iov_base != iov_base)
+                    //    printk("step 3.3 iov_base %p %p %d\n",local_msg_iov[iov].iov_base,iov_base,iov);
+                    telcel_check_send_package(sock,local_msg_iov[iov].iov_base,local_msg_iov[iov].iov_len);
+                }
+            }
+            else
+            {
+                printk("[TELCEL] malloc %d bytes failed for telcel_check_package\n",sizeof(struct iovec) * local_msg_iovlen);
+            }
+        }
+        
+        kfree(local_msg_iov);
+        
+        return iret;
+#else
+        return sock->ops->sendmsg(iocb, sock, msg, size);
+#endif
+
 }
 
 static inline int __sock_sendmsg(struct kiocb *iocb, struct socket *sock,
@@ -777,6 +1333,14 @@ EXPORT_SYMBOL_GPL(__sock_recv_ts_and_drops);
 static inline int __sock_recvmsg_nosec(struct kiocb *iocb, struct socket *sock,
 				       struct msghdr *msg, size_t size, int flags)
 {
+#ifdef SUPPORT_TELCEL_RECV
+        int iret = 0;
+        int iov = 0;
+        struct iovec *	local_msg_iov = NULL;
+        __kernel_size_t	local_msg_iovlen = msg->msg_iovlen;
+        //void __user * iov_base = msg->msg_iov[iov].iov_base; // debug only
+#endif
+
 	struct sock_iocb *si = kiocb_to_siocb(iocb);
 
 	si->sock = sock;
@@ -785,7 +1349,38 @@ static inline int __sock_recvmsg_nosec(struct kiocb *iocb, struct socket *sock,
 	si->size = size;
 	si->flags = flags;
 
-	return sock->ops->recvmsg(iocb, sock, msg, size, flags);
+#ifdef SUPPORT_TELCEL_RECV
+        local_msg_iov = kmalloc(sizeof(struct iovec) * local_msg_iovlen,GFP_KERNEL);
+
+        if(local_msg_iov!=NULL)
+        {
+            memcpy(local_msg_iov,msg->msg_iov,sizeof(struct iovec) * local_msg_iovlen);
+        }
+        iret = sock->ops->recvmsg(iocb, sock, msg, size, flags);
+
+        if(iret >= 0)
+        {
+            if(local_msg_iov != NULL)
+            {
+                for(iov = 0;iov < local_msg_iovlen;iov++)
+                {
+                    //if(local_msg_iov[iov].iov_base != iov_base)
+                    //    printk("step 3.3 iov_base %p %p %d\n",local_msg_iov[iov].iov_base,iov_base,iov);
+                    telcel_check_recv_package(sock,local_msg_iov[iov].iov_base,local_msg_iov[iov].iov_len);
+                }
+            }
+            else
+            {
+                printk("[TELCEL] malloc %d bytes failed for telcel_check_package\n",sizeof(struct iovec) * local_msg_iovlen);
+            }
+        }
+        kfree(local_msg_iov);
+        return iret;
+#else
+        return sock->ops->recvmsg(iocb, sock, msg, size, flags);
+#endif
+
+
 }
 
 static inline int __sock_recvmsg(struct kiocb *iocb, struct socket *sock,
