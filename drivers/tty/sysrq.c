@@ -519,6 +519,10 @@ void __handle_sysrq(int key, bool check_mask)
 	 */
 	orig_log_level = console_loglevel;
 	console_loglevel = 7;
+
+        //Tinno:CJ
+        dump_stack();
+        
 	printk(KERN_INFO "SysRq : ");
 
         op_p = __sysrq_get_key_op(key);
