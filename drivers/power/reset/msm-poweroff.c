@@ -254,7 +254,11 @@ static void msm_restart_prepare(const char *cmd)
 			qpnp_pon_set_restart_reason(
 				PON_RESTART_REASON_BOOTLOADER);
 			__raw_writel(0x77665500, restart_reason);
-		} else if (!strncmp(cmd, "recovery", 8)) {
+		}
+		else if (!strncmp(cmd, "ftm", 3)) {
+			__raw_writel(0x6f656d00, restart_reason);
+    } 
+		else if (!strncmp(cmd, "recovery", 8)) {
 			qpnp_pon_set_restart_reason(
 				PON_RESTART_REASON_RECOVERY);
 			__raw_writel(0x77665502, restart_reason);
