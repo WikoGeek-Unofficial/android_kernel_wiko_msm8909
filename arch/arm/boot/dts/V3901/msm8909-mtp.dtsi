@@ -146,7 +146,11 @@
 			debounce-interval = <15>;
 		};
 	};
-
+//add for tinno devinfo
+       dev_info_mtp{
+		compatible = "qcom,dev-info";
+       };
+//add end
 	audio_codec_mtp: sound {
 		compatible = "qcom,msm8x16-audio-codec";
 		qcom,model = "msm8909-snd-card";
@@ -242,7 +246,7 @@
 		qcom,rpull-up-kohm = <100>;
 		qcom,vref-batt-therm = <1800000>;
 
-		#include "batterydata-palladium.dtsi"
+		#include "batterydata-qrd-4v35-2500mah.dtsi"
 	};
 };
 
