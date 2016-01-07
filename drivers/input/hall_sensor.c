@@ -28,6 +28,12 @@
 
 #define	LID_DEV_NAME	"hall_sensor"
 #define HALL_INPUT	"/dev/input/hall_dev"
+static int hall_state=1;
+static s32 hall_state_rev = 1; 
+
+static	struct hall_data *hall_data_sensor;
+static	struct timer_list   hall_timer;  /* polling timer */
+
 
 struct hall_data {
 	int gpio;	/* device use gpio number */
@@ -47,14 +53,23 @@ static irqreturn_t hall_interrupt_handler(int irq, void *dev)
 
 	value = (gpio_get_value_cansleep(data->gpio) ? 1 : 0) ^
 		data->active_low;
+
+
 	if (value) {
-		input_report_switch(data->hall_dev, SW_LID, 0);
+		hall_state = 1;
 		dev_dbg(&data->hall_dev->dev, "far\n");
+		printk(KERN_DEBUG "hall_interrupt_handler far\n");
 	} else {
-		input_report_switch(data->hall_dev, SW_LID, 1);
+		hall_state = 0;
 		dev_dbg(&data->hall_dev->dev, "near\n");
+		printk(KERN_DEBUG "hall_interrupt_handler near\n");
 	}
-	input_sync(data->hall_dev);
+
+
+	if(hall_state)
+		mod_timer(&hall_timer, jiffies + msecs_to_jiffies(50));
+	else	
+		mod_timer(&hall_timer, jiffies + msecs_to_jiffies(500));
 
 	return IRQ_HANDLED;
 }
@@ -196,6 +211,42 @@ static int hall_parse_dt(struct device *dev, struct hall_data *data)
 }
 #endif
 
+static ssize_t hall_state_range_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return snprintf(buf, PAGE_SIZE, "%d\n", hall_state);
+}
+
+
+static DEVICE_ATTR(hallstate, S_IRUSR|S_IRGRP|S_IWUSR,
+		hall_state_range_show, NULL);
+
+static struct attribute *hall_attributes[] = {
+	&dev_attr_hallstate.attr,
+	NULL
+};
+
+static struct attribute_group hall_attribute_group = {
+	.attrs = hall_attributes
+};
+
+
+static void hall_pollkey(unsigned long data)
+{
+	
+	dev_dbg(&hall_data_sensor->hall_dev->dev, "hall_pollkey hall_state=%d, hall_state_rev=%d\n",hall_state, hall_state_rev);
+	if(hall_state != hall_state_rev)
+	{	
+		if(hall_state)
+			input_report_switch(hall_data_sensor->hall_dev, SW_LID, 0);
+		 else
+		 	input_report_switch(hall_data_sensor->hall_dev, SW_LID, 1);
+
+		input_sync(hall_data_sensor->hall_dev);
+		hall_state_rev = hall_state;
+	}
+}
+
 static int hall_driver_probe(struct platform_device *dev)
 {
 	struct hall_data *data;
@@ -224,6 +275,10 @@ static int hall_driver_probe(struct platform_device *dev)
 		err = -ENODEV;
 		goto exit;
 	}
+
+	init_timer(&hall_timer);
+	hall_timer.expires	= jiffies + msecs_to_jiffies(200);     // set work queue delay time 200ms
+	hall_timer.function	= hall_pollkey;
 
 	err = hall_input_init(dev, data);
 	if (err < 0) {
@@ -268,6 +323,11 @@ static int hall_driver_probe(struct platform_device *dev)
 		dev_err(&dev->dev, "power on failed: %d\n", err);
 		goto err_regulator_init;
 	}
+
+	err = sysfs_create_group(&data->hall_dev->dev.kobj,
+			&hall_attribute_group);
+
+	hall_data_sensor =data;
 
 	return 0;
 
