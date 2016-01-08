@@ -136,7 +136,16 @@ static struct snd_soc_dai_driver msm8x16_wcd_i2s_dai[];
 	mutex_lock_nested(&x, SINGLE_DEPTH_NESTING);
 
 #define MSM8X16_WCD_RELEASE_LOCK(x) mutex_unlock(&x);
-
+//++ headset sw IF TN:peter
+#ifdef CONFIG_SWITCH
+struct switch_dev wcd_mbhc_headset_switch = {
+	.name = "h2w",
+};
+struct switch_dev wcd_mbhc_button_switch = {
+	.name = "linebtn",
+};
+#endif
+//-- eadset sw IF
 
 /* Codec supports 2 IIR filters */
 enum {
@@ -5458,6 +5467,20 @@ static int msm8x16_wcd_codec_probe(struct snd_soc_codec *codec)
 	wcd_mbhc_init(&msm8x16_wcd_priv->mbhc, codec, &mbhc_cb, &intr_ids,
 		      wcd_mbhc_registers, true);
 
+//++ headset sw IF TN:peter
+#ifdef CONFIG_SWITCH
+        /* Add headset switch class support */         
+	ret = switch_dev_register(&wcd_mbhc_headset_switch);
+	if (ret < 0) {
+		dev_err(codec->dev, "not able to register switch device h2w\n");
+	}
+	/* Add linebtn switch class support */         
+	ret = switch_dev_register(&wcd_mbhc_button_switch);
+	if (ret < 0) {
+		dev_err(codec->dev, "not able to register switch device linebtn\n");
+	}
+#endif
+//-- eadset sw IF
 	msm8x16_wcd_priv->mclk_enabled = false;
 	msm8x16_wcd_priv->clock_active = false;
 	msm8x16_wcd_priv->config_mode_active = false;
@@ -5494,6 +5517,12 @@ static int msm8x16_wcd_codec_remove(struct snd_soc_codec *codec)
 	msm8x16_wcd_priv->on_demand_list[ON_DEMAND_MICBIAS].supply = NULL;
 	atomic_set(&msm8x16_wcd_priv->on_demand_list[ON_DEMAND_MICBIAS].ref, 0);
 	iounmap(msm8x16_wcd->dig_base);
+//++ headset sw IF TN:peter
+#ifdef CONFIG_SWITCH
+    switch_dev_unregister(&wcd_mbhc_headset_switch);
+    switch_dev_unregister(&wcd_mbhc_button_switch);
+#endif
+//-- eadset sw IF
 	kfree(msm8x16_wcd_priv->fw_data);
 	kfree(msm8x16_wcd_priv);
 

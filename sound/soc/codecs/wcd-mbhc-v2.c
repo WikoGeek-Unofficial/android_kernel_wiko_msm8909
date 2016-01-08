@@ -63,6 +63,12 @@ enum wcd_mbhc_cs_mb_en_flag {
 	WCD_MBHC_EN_PULLUP,
 	WCD_MBHC_EN_NONE,
 };
+//++ headset sw IF TN:peter
+#ifdef CONFIG_SWITCH
+extern struct switch_dev wcd_mbhc_headset_switch ;
+extern struct switch_dev wcd_mbhc_button_switch ;
+#endif
+//-- eadset sw IF
 
 static void wcd_mbhc_jack_report(struct wcd_mbhc *mbhc,
 				struct snd_soc_jack *jack, int status, int mask)
@@ -661,6 +667,11 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 				    WCD_MBHC_JACK_MASK);
 		wcd_mbhc_clr_and_turnon_hph_padac(mbhc);
 	}
+//++ headset sw IF TN:peter
+#ifdef CONFIG_SWITCH
+        switch_set_state(&wcd_mbhc_headset_switch, insertion ? 1:0);
+#endif
+//-- eadset sw IF
 	pr_debug("%s: leave hph_status %x\n", __func__, mbhc->hph_status);
 }
 
@@ -1685,7 +1696,11 @@ static irqreturn_t wcd_mbhc_btn_press_handler(int irq, void *data)
 	}
 	mask = wcd_mbhc_get_button_mask(mbhc);
 	mbhc->buttons_pressed |= mask;
-	mbhc->mbhc_cb->lock_sleep(mbhc, true);
+//++ headset sw IF TN:peter
+#ifdef CONFIG_SWITCH
+    switch_set_state(&wcd_mbhc_button_switch, mbhc->buttons_pressed ? 1:0);
+#endif
+//-- headset sw IF
 	if (schedule_delayed_work(&mbhc->mbhc_btn_dwork,
 				msecs_to_jiffies(400)) == 0) {
 		WARN(1, "Button pressed twice without release event\n");
@@ -1752,6 +1767,11 @@ static irqreturn_t wcd_mbhc_release_handler(int irq, void *data)
 			}
 		}
 		mbhc->buttons_pressed &= ~WCD_MBHC_JACK_BUTTON_MASK;
+//++ headset sw IF TN:peter
+#ifdef CONFIG_SWITCH
+        switch_set_state(&wcd_mbhc_button_switch, mbhc->buttons_pressed ? 1:0);
+#endif
+//-- eadset sw IF
 	}
 exit:
 	pr_debug("%s: leave\n", __func__);

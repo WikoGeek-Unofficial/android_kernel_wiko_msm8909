@@ -15,6 +15,11 @@
 #include <linux/wait.h>
 #include <linux/stringify.h>
 #include "wcdcal-hwdep.h"
+//++ headset sw IF TN:peter
+#ifdef CONFIG_SWITCH
+#include <linux/switch.h>  
+#endif
+//-- eadset sw IF
 
 #define TOMBAK_MBHC_NC	0
 #define TOMBAK_MBHC_NO	1
