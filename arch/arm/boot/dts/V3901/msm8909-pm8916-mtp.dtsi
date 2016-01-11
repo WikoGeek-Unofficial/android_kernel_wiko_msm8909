@@ -17,6 +17,14 @@
 			avdd-supply = <&pm8916_l17>;
 			vdd-supply = <&pm8916_l6>;
 		};
+		elan_ts@15 {
+			vdd_ana-supply = <&pm8916_l17>;
+			vcc_i2c-supply = <&pm8916_l6>;
+		};
+		focaltech@70 {
+			vdd-supply = <&pm8916_l17>;
+			vcc_i2c-supply = <&pm8916_l6>;
+		};
 	};
 
 	i2c@78b6000 {
