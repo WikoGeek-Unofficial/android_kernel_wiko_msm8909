@@ -56,6 +56,8 @@ static void mdss_dsi_panel_bklt_pwm(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 	u32 duty;
 	u32 period_ns;
 
+	printk("tinno backlight level=%d \n", level);
+	
 	if (ctrl->pwm_bl == NULL) {
 		pr_err("%s: no PWM\n", __func__);
 		return;
@@ -1053,6 +1055,7 @@ static int mdss_dsi_parse_reset_seq(struct device_node *np,
 
 static int mdss_dsi_gen_read_status(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
+	printk("tinno esd check: mdss_dsi_gen_read_status,  %d, %d ",ctrl_pdata->status_buf.data[0], ctrl_pdata->status_value);
 	if (ctrl_pdata->status_buf.data[0] !=
 					ctrl_pdata->status_value) {
 		pr_err("%s: Read back value from panel is incorrect\n",
@@ -1166,6 +1169,10 @@ static int mdss_dsi_parse_panel_features(struct device_node *np,
 	pinfo->esd_check_enabled = of_property_read_bool(np,
 		"qcom,esd-check-enabled");
 
+	pr_info("tinno esd %s: esd  %s", __func__,
+		(pinfo->esd_check_enabled ? "enabled" : "disabled"));
+
+	
 	pinfo->ulps_suspend_enabled = of_property_read_bool(np,
 		"qcom,suspend-ulps-enabled");
 	pr_info("%s: ulps during suspend feature %s", __func__,
