@@ -17,7 +17,7 @@
 #include "camera.h"
 #include "msm_cci.h"
 #include "msm_camera_dt_util.h"
-#if 0
+#ifdef CONFIG_TINNO_DEV_INFO
 #include <linux/proc_fs.h>
 #include <asm/uaccess.h>
  
@@ -667,7 +667,8 @@ int32_t msm_sensor_driver_probe(void *setting,
 
 	unsigned long                        mount_pos = 0;
 	uint32_t                             is_yuv;
-#if 0
+
+#ifdef CONFIG_TINNO_DEV_INFO
 	if(!has_created_camera_dev)
 	{
 		CAREAT_TINNO_DEV_INFO(camera_number);
@@ -929,19 +930,30 @@ int32_t msm_sensor_driver_probe(void *setting,
 		goto free_camera_info;
 	}
 
-	pr_err("%s probe succeeded", slave_info->sensor_name);
-	#if 0
+	printk("YGYG %s   %s probe succeeded", __func__,slave_info->sensor_name);
+	
+	#ifdef CONFIG_TINNO_DEV_INFO
 	printk("YC %s position %d \n", __func__,s_ctrl->sensordata->sensor_info->position);
 
 
 	if(s_ctrl->sensordata->sensor_info->position==0){
-	sprintf(main_des_buf, "%s",slave_info->sensor_name);
+		
+		if(strcmp(slave_info->sensor_name, "ov5648_sunwin") == 0)
+		sprintf(main_des_buf, "%s","ov5648_sunwin(5M|interp:null)");
+		else
+		sprintf(main_des_buf, "%s",slave_info->sensor_name);
+		
 	CAREAT_TINNO_DEV_INFO(main_camera);
 	SET_DEVINFO_STR(main_camera,main_des_buf);
 	camera_found_number++;
 	}
 	else if(s_ctrl->sensordata->sensor_info->position==1){
-	sprintf(sub_des_buf, "%s",slave_info->sensor_name);
+		
+		if(strcmp(slave_info->sensor_name, "ov5670_sunwin") == 0)
+		sprintf(sub_des_buf, "%s","ov5670_sunwin(5M|interp:null)");
+		else
+		sprintf(sub_des_buf, "%s",slave_info->sensor_name);
+
 	CAREAT_TINNO_DEV_INFO(sub_camera);
 	SET_DEVINFO_STR(sub_camera,sub_des_buf);
 	camera_found_number++;

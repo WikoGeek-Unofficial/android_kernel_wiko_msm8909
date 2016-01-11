@@ -19,7 +19,7 @@
 #include <linux/regulator/consumer.h>
 
  
-#if 0
+#ifdef CONFIG_TINNO_DEV_INFO
 #include <linux/proc_fs.h>
 #include <asm/uaccess.h>
 
@@ -1683,7 +1683,7 @@ int msm_sensor_i2c_probe(struct i2c_client *client,
 
 	printk("YC %s %s probe succeeded\n", __func__, client->name);
  
-    #if 0
+    #ifdef CONFIG_TINNO_DEV_INFO
 	 	printk("YC %s position %d \n", __func__,s_ctrl->sensordata->sensor_info->position);
 
 		if(s_ctrl->sensordata->sensor_info->position==0){
