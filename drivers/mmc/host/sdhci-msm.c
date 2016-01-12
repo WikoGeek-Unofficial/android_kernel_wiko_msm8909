@@ -305,6 +305,7 @@ struct sdhci_msm_pltfm_data {
 	bool nonremovable;
 	bool use_mod_dynamic_qos;
 	bool nonhotplug;
+	bool support_sleep_awake;
 	bool no_1p8v;
 	bool pin_cfg_sts;
 	struct sdhci_msm_pin_data *pin_data;
@@ -1762,6 +1763,9 @@ static struct sdhci_msm_pltfm_data *sdhci_msm_populate_pdata(struct device *dev,
 
 	if (of_get_property(np, "qcom,modified-dynamic-qos", NULL))
 		pdata->use_mod_dynamic_qos = true;
+
+	if (of_property_read_bool(np, "qcom,support-sleep-awake"))
+		pdata->support_sleep_awake = true;
 
 	if (of_get_property(np, "qcom,nonhotplug", NULL))
 		pdata->nonhotplug = true;
@@ -3503,6 +3507,10 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 
 	if (msm_host->pdata->nonhotplug)
 		msm_host->mmc->caps2 |= MMC_CAP2_NONHOTPLUG;
+
+	if (msm_host->pdata->support_sleep_awake)
+			msm_host->mmc->caps2 |= MMC_CAP2_SLEEP_AWAKE;
+
 
 	init_completion(&msm_host->pwr_irq_completion);
 
