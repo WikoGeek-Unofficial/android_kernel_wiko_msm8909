@@ -1160,7 +1160,7 @@ static int i2c_msm_dma_xfer_buf(struct i2c_msm_ctrl *ctrl,
 	dma_desc = dmaengine_prep_slave_sg(chan->dma_chan, sg, 1, chan->dir,
 									flags);
 
-	if (dma_desc < 0) {
+	if (dma_desc == NULL) {
 		dev_err(ctrl->dev,
 		   "error dmaengine_prep_slave_sg:%ld\n", PTR_ERR(dma_desc));
 		return PTR_ERR(dma_desc);

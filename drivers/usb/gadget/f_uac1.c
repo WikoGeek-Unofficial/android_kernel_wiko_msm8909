@@ -592,7 +592,7 @@ static void f_audio_capture_work(struct work_struct *data)
 	int res = 0;
 
 	capture_buf = f_audio_buffer_alloc(audio_capture_buf_size);
-	if (capture_buf <= 0) {
+	if (capture_buf == NULL) {
 		pr_err("%s: buffer alloc failed\n", __func__);
 		return;
 	}
