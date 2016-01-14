@@ -156,6 +156,15 @@ config OV5648
 		snapshot set to 2592*1944 at 12 fps,
 		This sensor driver does not support auto focus.
 
+config HI258_8909
+        bool "Hynix hi258_8909 (YUV 2MP)"
+        depends on MSMB_CAMERA
+        ---help---
+                Hynix 2 MP Bayer Sensor with fixed focus.uses
+                2 mipi lanes, preview config = 800*600 15 fps,
+                snapshot config = 1600 * 1200 at 30 fps.It supports
+                few special effects like mono..
+
 config MT9M114
 	bool "Sensor MT9M114 (YUV 1.26MP)"
 	depends on MSMB_CAMERA
@@ -208,7 +217,14 @@ config GC0310
 		It supports 1 mipi lane.
 		Preview and snapshot resolution shall be 640*480 at 30 fps,
 		It does not support auto focus.
-
+config HI258_8909
+	bool "Sensor HI258_8909 (YUV 2M)"
+	depends on MSMB_CAMERA
+	---help---
+		HI258_8909 is a Galaxycore 2MP YUV Sensor.
+		It supports 1 mipi lane.
+		Preview and snapshot resolution shall be 640*480 at 30 fps,
+		It does not support auto focus.
 config OV8825
 	bool "OmniVision OV8825 (BAYER 8MP)"
 	depends on MSMB_CAMERA

@@ -235,6 +235,7 @@ static void hall_pollkey(unsigned long data)
 {
 	
 	dev_dbg(&hall_data_sensor->hall_dev->dev, "hall_pollkey hall_state=%d, hall_state_rev=%d\n",hall_state, hall_state_rev);
+	printk("YCYC hall_state=%d",hall_state);
 	if(hall_state != hall_state_rev)
 	{	
 		if(hall_state)
