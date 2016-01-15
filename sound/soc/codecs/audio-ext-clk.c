@@ -101,7 +101,9 @@ static int audio_ext_clk_prepare(struct clk *clk)
 		if (ret != 0) {
 			pr_err("%s: Disable TLMM pins failed with %d\n",
 				   __func__, ret);
-			ret = -EIO;
+			ret = -EIO;	
+			//TN:peter
+			goto err;
 		}
 
 		 ret = pinctrl_select_state(audio_ap_clk.pnctrl_info.pinctrl,
@@ -142,7 +144,8 @@ static int audio_ext_clk_prepare(struct clk *clk)
 		return gpio_direction_output(audio_clk->gpio, 1);
 	}
 err:
-	return 0;
+	//TN:peter
+	return ret;
 }
 
 static void audio_ext_clk_unprepare(struct clk *clk)
