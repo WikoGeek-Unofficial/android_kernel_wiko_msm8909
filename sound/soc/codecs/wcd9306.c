@@ -5823,7 +5823,7 @@ static void wcd9xxx_prepare_hph_pa(struct wcd9xxx_mbhc *mbhc,
 	int i;
 	struct snd_soc_codec *codec = mbhc->codec;
 	u32 delay;
-
+    int rc = 0;//TN:peter
 	const struct wcd9xxx_reg_mask_val reg_set_paon[] = {
 		{WCD9XXX_A_CDC_CLSH_B1_CTL, 0x0F, 0x00},
 		{WCD9XXX_A_RX_HPH_CHOP_CTL, 0xFF, 0xA4},
@@ -5888,10 +5888,12 @@ static void wcd9xxx_prepare_hph_pa(struct wcd9xxx_mbhc *mbhc,
 			delay = 1000;
 		else
 			delay = 0;
-		wcd9xxx_soc_update_bits_push(codec, lh,
+		rc = wcd9xxx_soc_update_bits_push(codec, lh,
 					     reg_set_paon[i].reg,
 					     reg_set_paon[i].mask,
 					     reg_set_paon[i].val, delay);
+		if(rc < 0)	//TN:peter		
+			pr_err("%s: wcd9xxx reg[%x],mask[%x],val[%x] update err\n", __func__,reg_set_paon[i].reg,reg_set_paon[i].mask,reg_set_paon[i].val);
 	}
 	pr_debug("%s: PAs are prepared\n", __func__);
 	return;
