@@ -37,10 +37,10 @@ static struct snd_pcm_hw_constraint_list constraints_sample_rates = {
 static int multimedia_startup(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *dai)
 {
-	snd_pcm_hw_constraint_list(substream->runtime, 0,
+	//TN:peter
+	return snd_pcm_hw_constraint_list(substream->runtime, 0,
 		SNDRV_PCM_HW_PARAM_RATE,
 		&constraints_sample_rates);
-	return 0;
 }
 
 static int fe_dai_probe(struct snd_soc_dai *dai)
