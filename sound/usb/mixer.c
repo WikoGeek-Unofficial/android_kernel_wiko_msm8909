@@ -2329,7 +2329,7 @@ static int snd_usb_mixer_status_create(struct usb_mixer_interface *mixer)
 	void *transfer_buffer;
 	int buffer_length;
 	unsigned int epnum;
-
+	int rc = 0; //TN:peter
 	/* we need one interrupt input endpoint */
 	if (get_iface_desc(mixer->hostif)->bNumEndpoints < 1)
 		return 0;
@@ -2351,8 +2351,8 @@ static int snd_usb_mixer_status_create(struct usb_mixer_interface *mixer)
 			 usb_rcvintpipe(mixer->chip->dev, epnum),
 			 transfer_buffer, buffer_length,
 			 snd_usb_mixer_interrupt, mixer, ep->bInterval);
-	usb_submit_urb(mixer->urb, GFP_KERNEL);
-	return 0;
+	rc = usb_submit_urb(mixer->urb, GFP_KERNEL);//TN:peter
+	return rc;//TN:peter
 }
 
 int snd_usb_create_mixer(struct snd_usb_audio *chip, int ctrlif,
