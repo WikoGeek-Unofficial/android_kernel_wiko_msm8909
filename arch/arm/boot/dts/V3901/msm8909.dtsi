@@ -347,7 +347,7 @@
 		compatible = "qcom,msm-lsuart-v14";
 		reg = <0x78af000 0x200>;
 		interrupts = <0 107 0>;
-		status = "disabled";
+		//status = "disabled";
 		clocks = <&clock_gcc clk_gcc_blsp1_uart1_apps_clk>,
 			 <&clock_gcc clk_gcc_blsp1_ahb_clk>;
 		clock-names = "core_clk", "iface_clk";
