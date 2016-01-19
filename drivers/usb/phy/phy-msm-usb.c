@@ -51,10 +51,9 @@
 #include <linux/qpnp/qpnp-adc.h>
 
 #include <linux/msm-bus.h>
-#ifdef CONFIG_TINNO_L5251 
-#define TINNO_GPIO_CTL_VBUS
-#endif
-#ifdef TINNO_GPIO_CTL_VBUS
+
+
+#ifdef CONFIG_TINNO_GPIO_CTL_VBUS
 int otg_vbus_en_gpio=0;
 int otg_vbus_state=0;
 #endif
@@ -122,7 +121,7 @@ static bool mhl_det_in_progress;
 static struct regulator *hsusb_3p3;
 static struct regulator *hsusb_1p8;
 static struct regulator *hsusb_vdd;
-#ifndef TINNO_GPIO_CTL_VBUS
+#ifndef CONFIG_TINNO_GPIO_CTL_VBUS
 static struct regulator *vbus_otg;
 #endif
 static struct regulator *mhl_usb_hs_switch;
@@ -2158,7 +2157,7 @@ static void msm_hsusb_vbus_power(struct msm_otg *motg, bool on)
 			vbus_is_on = on;
 		return;
 	}
-#ifndef TINNO_GPIO_CTL_VBUS
+#ifndef CONFIG_TINNO_GPIO_CTL_VBUS
 	if (!vbus_otg) {
 		pr_err("vbus_otg is NULL.");
 		return;
@@ -2172,7 +2171,7 @@ static void msm_hsusb_vbus_power(struct msm_otg *motg, bool on)
 	 */
 	if (on) {
 		msm_otg_notify_host_mode(motg, on);
-#ifdef TINNO_GPIO_CTL_VBUS
+#ifdef CONFIG_TINNO_GPIO_CTL_VBUS
 		otg_vbus_state=1;
 		gpio_direction_output(otg_vbus_en_gpio,1);
 		printk("vbus power down!\n");
@@ -2185,7 +2184,7 @@ static void msm_hsusb_vbus_power(struct msm_otg *motg, bool on)
 #endif			
 		vbus_is_on = true;
 	} else {
-#ifdef TINNO_GPIO_CTL_VBUS
+#ifdef CONFIG_TINNO_GPIO_CTL_VBUS
 		otg_vbus_state=0;
 		gpio_direction_output(otg_vbus_en_gpio,0);
 		printk("vbus power down!\n");
@@ -2215,7 +2214,7 @@ static int msm_otg_set_host(struct usb_otg *otg, struct usb_bus *host)
 		return -ENODEV;
 	}
 
-#ifndef TINNO_GPIO_CTL_VBUS	
+#ifndef CONFIG_TINNO_GPIO_CTL_VBUS	
 	if (!motg->pdata->vbus_power && host) {
 		vbus_otg = devm_regulator_get(motg->phy.dev, "vbus_otg");
 		if (IS_ERR(vbus_otg)) {
@@ -5306,7 +5305,7 @@ struct msm_otg_platform_data *msm_otg_dt_to_pdata(struct platform_device *pdev)
 		pdata->pmic_id_irq = 0;
 
 //add by alik
-#ifdef TINNO_GPIO_CTL_VBUS
+#ifdef CONFIG_TINNO_GPIO_CTL_VBUS
 otg_vbus_en_gpio=of_get_named_gpio(node,"qcom,otg_en_gpio",0);
 printk("otg_vbus_en_gpio=%d \n ",otg_vbus_en_gpio);
 gpio_request(otg_vbus_en_gpio, "OTG VBUS EN");
