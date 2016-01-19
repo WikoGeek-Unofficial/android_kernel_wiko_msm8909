@@ -168,6 +168,23 @@ static int dload_set(const char *val, struct kernel_param *kp)
 
 	return 0;
 }
+
+int __init tinno_enable_ramdump(char *enable)
+{
+	if (enable && strlen(enable))
+	{		
+		printk("tinno_enable_ramdump %s\n", enable);
+		if(!strcmp(enable,"1"))		
+			download_mode = 1;
+			return 0;
+	}
+	else
+	{
+		return -1;
+	}
+}
+early_param("ramdump", tinno_enable_ramdump);
+
 #else
 #define set_dload_mode(x) do {} while (0)
 

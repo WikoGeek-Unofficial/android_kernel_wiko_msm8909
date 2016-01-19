@@ -2391,3 +2391,6 @@ default n
 config TINNO_V3901
 bool "for tinno product V3901 dts build"
 default n
+config TINNO_PRINTK_UART
+bool "for tinno product printk uart dts build"
+default n
