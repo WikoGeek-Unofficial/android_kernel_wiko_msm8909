@@ -82,27 +82,15 @@
 };
 
 &i2c_3 {
-	qcom,actuator@0 {
-		cam_vaf-supply = <&pm8916_l8>;
-	};
-
-
-	qcom,eeprom@6c{
-		cam_vdig-supply = <&pm8916_l2>;
-		cam_vana-supply = <&pm8916_l10>;
-		cam_vio-supply = <&pm8916_l6>;
-		cam_vaf-supply = <&pm8916_l8>;
-	};
 
 	qcom,camera@0 {
 		cam_vdig-supply = <&pm8916_l2>;
-		cam_vana-supply = <&pm8916_l10>;
 		cam_vio-supply = <&pm8916_l6>;
-		cam_vaf-supply = <&pm8916_l8>;
 	};
-
+	qcom,camera@42 {
+		cam_vio-supply = <&pm8916_l6>;
+	};
 	qcom,camera@1 {
-		cam_vana-supply = <&pm8916_l10>;
 		cam_vio-supply = <&pm8916_l6>;
 	};
 };
