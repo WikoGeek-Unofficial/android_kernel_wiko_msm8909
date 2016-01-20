@@ -34,13 +34,22 @@ int chgr_getled_gpio;
 extern char *saved_command_line;
 #define CHARGER_MODE_BOOT   "androidboot.mode=charger"
 int chg_boot_flag=0;
+/*
 #ifdef CONFIG_TINNO_L5221 
+#define USE_GPIO_RED_LED
+#endif
+
+#ifdef CONFIG_TINNO_V3901
+#define USE_GPIO_RED_LED
+#endif
+
+*/
+#ifdef CONFIG_USE_GPIO_RED_LED
 #define USE_GPIO_RED_LED
 #endif
 
 #ifdef CONFIG_TINNO_L5251
 #define TINNO_HIGH_VOLTAGE_BATTERY
-#define USE_GPIO_RED_LED
 extern int otg_vbus_state;
 extern int battype;
 const char battery_type_str[2][50]={"Li-polymer Battery","Li-ion Battery"};

@@ -424,6 +424,10 @@ config BATTERY_BQ28400
 	  The device monitors the battery level (Relative-State-Of-Charge).
 	  The device is SBS compliant, providing battery info over I2C.
 
+
+config USE_GPIO_RED_LED
+	bool "use gpio ctl red led!"
+
 config QPNP_CHARGER
 	tristate "QPNP Charger driver"
 	depends on SPMI
