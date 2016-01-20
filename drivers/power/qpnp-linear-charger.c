@@ -48,8 +48,13 @@ int chg_boot_flag=0;
 #define USE_GPIO_RED_LED
 #endif
 
-#ifdef CONFIG_TINNO_L5251
+
+#ifdef CONFIG_TINNO_HIGH_VOLTAGE_BATTERY
 #define TINNO_HIGH_VOLTAGE_BATTERY
+#endif
+
+#ifdef CONFIG_TINNO_L5251
+//#define TINNO_HIGH_VOLTAGE_BATTERY
 extern int otg_vbus_state;
 extern int battype;
 const char battery_type_str[2][50]={"Li-polymer Battery","Li-ion Battery"};
