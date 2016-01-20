@@ -32,7 +32,9 @@
 			qcom,clk-gpio = <&pm8916_gpios 2 0>;
 		};
 	};
-
+	hall {
+		vddio-supply = <&pm8916_l6>;
+	};
 };
 
 &audio_codec_mtp {
@@ -59,22 +61,21 @@
 };
 
 &i2c_1 {
-	mpu6050@68 {
-		vdd-supply = <&pm8916_l17>;
-		vlogic-supply = <&pm8916_l6>;
-	};
-
-	avago@39 {
+	bosch@18 {
 		vdd-supply = <&pm8916_l17>;
 		vio-supply = <&pm8916_l6>;
 	};
 
-	memsic@30 {
+	stk@48 {
 		vdd-supply = <&pm8916_l17>;
 		vio-supply = <&pm8916_l6>;
 	};
 
-	akm@c {
+	akm@c { 
+		vdd-supply = <&pm8916_l17>;
+		vio-supply = <&pm8916_l6>;
+	};
+	bmg@68 { 
 		vdd-supply = <&pm8916_l17>;
 		vio-supply = <&pm8916_l6>;
 	};
