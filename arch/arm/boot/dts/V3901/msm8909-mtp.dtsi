@@ -397,16 +397,16 @@
 		};
 	};
 
-	ak8963_int_pin {
-		qcom,pins = <&gp 65>;
+	akm_reset_pin {
+		qcom,pins = <&gp 36>;
 		qcom,pin-func = <0>;
 		qcom,num-grp-pins = <1>;
-		label = "ak8963-irq";
-		ak8963_default: ak8963_default {
+		label = "akm_reset_pin";
+		akm_default: akm_default {
 			drive-strength = <6>;
 			bias-pull-up;
 		};
-		ak8963_sleep: ak8963_sleep {
+		akm_sleep: akm_sleep {
 			drive-strength = <2>;
 			bias-pull-down;
 		};
@@ -459,17 +459,16 @@
 	};
 
 	akm@c { /* Magnetic field sensor */
-		compatible = "ak,ak8963";
+		compatible = "ak,ak09911";
 		reg = <0x0c>;
-		pinctrl-names = "ak8963_default", "ak8963_sleep";
-		pinctrl-0 = <&ak8963_default>;
-		pinctrl-1 = <&ak8963_sleep>;
-		interrupt-parent = <&msm_gpio>;
-		interrupts = <65 0x2>;
+		pinctrl-names = "default","sleep";
+		pinctrl-0 = <&akm_default>;
+		pinctrl-1 = <&akm_sleep>;
 		vdd-supply = <&pm8909_l17>;
 		vio-supply = <&pm8909_l6>;
-		ak,layout = <0x6>;
-		ak,auto-report;
+		akm,layout = <0x5>;
+		akm,gpio_rstn = <&msm_gpio 36 0x0>;
+		akm,auto-report;
 	};
 };
 
