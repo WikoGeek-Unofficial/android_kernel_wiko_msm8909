@@ -1029,7 +1029,7 @@ static void elan_touch_esd_func(struct work_struct *work)
     uint8_t cmd[] = {0x53, 0x00, 0x00, 0x01};
     struct i2c_client *client = private_ts->client;
 
-    elan_info("esd %s: enter.......", __FUNCTION__);
+    //elan_info("esd %s: enter.......", __FUNCTION__);
 
     if(private_ts->power_lock == 1){
         goto out_esd;
@@ -1042,7 +1042,7 @@ static void elan_touch_esd_func(struct work_struct *work)
 	}
 
     if(have_interrupts == 1){
-        elan_info("esd %s: had interrup not need check", __func__);
+        //elan_info("esd %s: had interrup not need check", __func__);
     }
     else{
         res = elan_ts_send_cmd(client, cmd, sizeof(cmd));
@@ -1067,7 +1067,7 @@ static void elan_touch_esd_func(struct work_struct *work)
 out_esd:
     have_interrupts = 0;
     queue_delayed_work(esd_wq, &esd_work, delay);
-    elan_info("[elan esd] %s: out.......", __FUNCTION__);
+    //elan_info("[elan esd] %s: out.......", __FUNCTION__);
 }
 #endif
 
@@ -1414,7 +1414,7 @@ static int elan_ts_recv_data(struct elan_ts_data *ts, uint8_t *buf)
         elan_info("[elan error] elan_ts_recv_data\n");
         return -1;
     }
-#ifdef PRINT_INT_INFO
+#if 0
     elan_info("%x %x %x %x %x %x %x %x", buf[0],buf[1],buf[2],buf[3],buf[4],buf[5],buf[6],buf[7]);
     if(PACKET_SIZE >= 18)
         elan_info("%x %x %x %x %x %x %x %x", buf[8],buf[9],buf[10],buf[11],buf[12],buf[13],buf[14],buf[15]);
@@ -1433,7 +1433,7 @@ static int elan_ts_recv_data(struct elan_ts_data *ts, uint8_t *buf)
 #endif
 
     if(FINGERS_PKT != buf[0]){
-        elan_info("[elan] other event packet:%x %x %x %x %x %x %x %x\n", buf[0],buf[1],buf[2],buf[3],buf[4],buf[5],buf[6],buf[7]);
+        //elan_info("[elan] other event packet:%x %x %x %x %x %x %x %x\n", buf[0],buf[1],buf[2],buf[3],buf[4],buf[5],buf[6],buf[7]);
         return -1;
     }
 
@@ -1525,8 +1525,8 @@ static void elan_ts_report_data(struct elan_ts_data *ts, uint8_t *buf)
 
 static irqreturn_t elan_ts_irq_handler(int irq, void *dev_id)
 {
-    elan_info("----------elan_ts_irq_handler----------");
-    elan_info("[elan] disable_irq_nosync\n");
+    //elan_info("----------elan_ts_irq_handler----------");
+    //elan_info("[elan] disable_irq_nosync\n");
     disable_irq_nosync(elan_irq);
 #ifdef ELAN_ESD_CHECK
     have_interrupts = 1;
@@ -1611,7 +1611,7 @@ static int touch_event_handler(void *unused)
     sched_setscheduler(current, SCHED_RR, &param);
 
     do{
-        elan_info("[elan] enable_irq\n");
+        //elan_info("[elan] enable_irq\n");
         enable_irq(elan_irq);
         set_current_state(TASK_INTERRUPTIBLE);
         wait_event_interruptible(waiter, tpd_flag != 0);
