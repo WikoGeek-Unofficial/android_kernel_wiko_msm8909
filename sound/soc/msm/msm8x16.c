@@ -9,7 +9,6 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/gpio.h>
@@ -72,6 +71,11 @@ enum btsco_rates {
 	RATE_8KHZ_ID,
 	RATE_16KHZ_ID,
 };
+
+#if defined  CONFIG_TINNO_L5251 || defined CONFIG_TINNO_V3901
+bool current_ext_spk_pa_state = false; //add for headset pa 
+#endif
+
 
 static int msm_btsco_rate = BTSCO_RATE_8KHZ;
 static int msm_btsco_ch = 1;
@@ -410,7 +414,7 @@ static int enable_spk_ext_pa(struct snd_soc_codec *codec, int enable)
 		return -EINVAL;
 	}
 
-	pr_debug("%s: %s external speaker PA\n", __func__,
+	printk("%s: %s external speaker PA\n", __func__,
 		enable ? "Enable" : "Disable");
 	ret = pinctrl_select_state(pinctrl_info.pinctrl,
 				pinctrl_info.cdc_lines_act);
@@ -420,7 +424,24 @@ static int enable_spk_ext_pa(struct snd_soc_codec *codec, int enable)
 		return -EINVAL;
 	}
 
-	gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, enable);
+	#if defined  CONFIG_TINNO_L5251 || defined CONFIG_TINNO_V3901
+	if(enable == 1)
+	{
+		current_ext_spk_pa_state = true;//add for headset pa 
+		gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, 1);
+		udelay(2);
+		gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, 0);
+		udelay(2);	
+		gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, 1);
+	}
+	else
+	{
+		current_ext_spk_pa_state = false;//add for headset pa 
+		gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, 0);
+	}
+	#else	
+		gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, enable);
+	#endif
 
 	return 0;
 }

@@ -488,6 +488,11 @@ static bool wcd_mbhc_is_hph_pa_on(struct wcd_mbhc *mbhc)
 	return (hph_pa_on) ? true : false;
 }
 
+//++ extern pa TN:peter
+#if defined  CONFIG_TINNO_L5251 || defined CONFIG_TINNO_V3901
+extern bool current_ext_spk_pa_state;
+#endif
+//-- extern pa
 static void wcd_mbhc_set_and_turnoff_hph_padac(struct wcd_mbhc *mbhc)
 {
 	u8 wg_time;
@@ -504,6 +509,17 @@ static void wcd_mbhc_set_and_turnoff_hph_padac(struct wcd_mbhc *mbhc)
 	} else {
 		pr_debug("%s PA is off\n", __func__);
 	}
+	
+	
+	
+
+//++ extern pa TN:peter
+#if defined  CONFIG_TINNO_L5251 || defined CONFIG_TINNO_V3901
+	printk("TINNO current_ext_spk_pa_state  %d\n",current_ext_spk_pa_state);
+	if(current_ext_spk_pa_state==0)
+#endif
+//-- extern pa
+
 	WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_HPH_PA_EN, 0);
 	usleep_range(wg_time * 1000, wg_time * 1000 + 50);
 }
