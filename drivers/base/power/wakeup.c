@@ -659,7 +659,9 @@ void pm_wakeup_event(struct device *dev, unsigned int msec)
 }
 EXPORT_SYMBOL_GPL(pm_wakeup_event);
 
-static void print_active_wakeup_sources(void)
+//Tinno:CJ for debug thread print from tinno_kernel_debug
+//static void print_active_wakeup_sources(void)
+void print_active_wakeup_sources(void)
 {
 	struct wakeup_source *ws;
 	int active = 0;
@@ -668,7 +670,7 @@ static void print_active_wakeup_sources(void)
 	rcu_read_lock();
 	list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
 		if (ws->active) {
-			pr_info("active wakeup source: %s\n", ws->name);
+			pr_info("Tinno: active wakeup source: %s\n", ws->name);
 			active = 1;
 		} else if (!active &&
 			   (!last_activity_ws ||
@@ -679,7 +681,7 @@ static void print_active_wakeup_sources(void)
 	}
 
 	if (!active && last_activity_ws)
-		pr_info("last active wakeup source: %s\n",
+		pr_info("Tinno: last active wakeup source: %s\n",
 			last_activity_ws->name);
 	rcu_read_unlock();
 }

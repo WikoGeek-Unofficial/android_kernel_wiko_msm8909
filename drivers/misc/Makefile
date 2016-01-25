@@ -69,3 +69,4 @@ obj-$(CONFIG_QCOM_LIQUID_DOCK)	+= qcom_liquid_dock.o
 obj-y				+= qcom/
 obj-$(CONFIG_UID_CPUTIME) 	+= uid_cputime.o
 obj-$(CONFIG_TINNO_DEV_INFO)       += tinno_dev_info.o
+obj-$(CONFIG_TINNO_KE_DBUG)       += tinno_kernel_debug.o

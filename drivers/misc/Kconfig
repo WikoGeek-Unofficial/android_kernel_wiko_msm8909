@@ -578,6 +578,13 @@ config TINNO_DEV_INFO
    tristate "support tinno dev info!"
    help
     This option enables support tinno dev info.
+    
+config TINNO_KE_DBUG
+   tristate "support tinno kernel debug!"
+   default y
+   help
+    This option enables support tinno kernel debug.    
+    
 config QFP_FUSE
 	tristate "QFPROM Fuse Read/Write support"
 	help
