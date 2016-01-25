@@ -136,11 +136,11 @@
 						
 		};
 
-		focaltech@70 {
-			compatible = "focaltech, fts";
+		focaltech@38 {
+			compatible = "focaltech,fts";
 			reg = <0x38>;
 			interrupt-parent = <&msm_gpio>;
-			interrupts = <13 0x8>;
+			interrupts = <13 0x2008>;
 			vdd-supply = <&pm8909_l17>;
 			vcc_i2c-supply = <&pm8909_l6>;
 			focaltech,name = "fts";
@@ -172,7 +172,7 @@
 
 	gen-vkeys {
 		compatible = "qcom,gen-vkeys";
-		label = "goodix-ts";
+		label = "fts_ts";
 		qcom,disp-maxx = <480>;
 		qcom,disp-maxy = <854>;
 		qcom,panel-maxx = <480>;

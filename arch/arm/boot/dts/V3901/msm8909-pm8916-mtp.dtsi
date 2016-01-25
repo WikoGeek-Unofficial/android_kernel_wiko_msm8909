@@ -21,7 +21,7 @@
 			vdd_ana-supply = <&pm8916_l17>;
 			vcc_i2c-supply = <&pm8916_l6>;
 		};
-		focaltech@70 {
+		focaltech@38 {
 			vdd-supply = <&pm8916_l17>;
 			vcc_i2c-supply = <&pm8916_l6>;
 		};
