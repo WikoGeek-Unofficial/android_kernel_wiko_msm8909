@@ -265,6 +265,7 @@ static void msm_restart_prepare(const char *cmd)
 	} else {
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_HARD_RESET);
 	}
+	
 
 	if (cmd != NULL) {
 		if (!strncmp(cmd, "bootloader", 10)) {
@@ -273,6 +274,8 @@ static void msm_restart_prepare(const char *cmd)
 			__raw_writel(0x77665500, restart_reason);
 		}
 		else if (!strncmp(cmd, "ftm", 3)) {
+			qpnp_pon_set_restart_reason(
+				PON_RESTART_REASON_FTM);
 			__raw_writel(0x6f656d00, restart_reason);
     } 
 		else if (!strncmp(cmd, "recovery", 8)) {
