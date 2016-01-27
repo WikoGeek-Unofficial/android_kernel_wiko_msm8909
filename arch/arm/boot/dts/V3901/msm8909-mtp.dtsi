@@ -427,7 +427,7 @@
 		vdd-supply = <&pm8909_l17>;
 		vio-supply = <&pm8909_l6>;
 		bosch,init-interval = <200>;
-		bosch,place = <0x6>;
+		bosch,place = <0x4>;
 		bosch,gpio-int1 = <&msm_gpio 96 0x2002>;
 	};
 
