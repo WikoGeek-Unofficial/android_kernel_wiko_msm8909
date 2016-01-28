@@ -1289,7 +1289,7 @@ static int qpnp_flash_set(struct qpnp_led_data *led)
 				}
 			}
 
-			qpnp_led_masked_write(led, FLASH_MAX_CURR(led->base),
+			rc = qpnp_led_masked_write(led, FLASH_MAX_CURR(led->base),
 				FLASH_CURRENT_MASK,
 				TORCH_MAX_LEVEL);
 			if (rc) {
@@ -1299,7 +1299,7 @@ static int qpnp_flash_set(struct qpnp_led_data *led)
 				goto error_reg_write;
 			}
 
-			qpnp_led_masked_write(led,
+			rc = qpnp_led_masked_write(led,
 				FLASH_LED_TMR_CTRL(led->base),
 				FLASH_TMR_MASK,
 				FLASH_TMR_WATCHDOG);
@@ -1331,7 +1331,7 @@ static int qpnp_flash_set(struct qpnp_led_data *led)
 				goto error_reg_write;
 			}
 
-			qpnp_led_masked_write(led,
+			rc = qpnp_led_masked_write(led,
 				FLASH_WATCHDOG_TMR(led->base),
 				FLASH_WATCHDOG_MASK,
 				led->flash_cfg->duration);
@@ -1379,7 +1379,7 @@ static int qpnp_flash_set(struct qpnp_led_data *led)
 				goto error_flash_set;
 			}
 
-			qpnp_led_masked_write(led,
+			rc = qpnp_led_masked_write(led,
 				FLASH_LED_TMR_CTRL(led->base),
 				FLASH_TMR_MASK,
 				FLASH_TMR_SAFETY);
