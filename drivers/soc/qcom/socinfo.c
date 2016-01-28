@@ -1046,45 +1046,46 @@ static void * __init setup_dummy_socinfo(void)
 static void __init populate_soc_sysfs_files(struct device *msm_soc_device)
 {
 	uint32_t legacy_format = socinfo_get_format();
+    int err;
 
-	device_create_file(msm_soc_device, &msm_soc_attr_vendor);
-	device_create_file(msm_soc_device, &image_version);
-	device_create_file(msm_soc_device, &image_variant);
-	device_create_file(msm_soc_device, &image_crm_version);
-	device_create_file(msm_soc_device, &select_image);
+	err = device_create_file(msm_soc_device, &msm_soc_attr_vendor);
+	err |= device_create_file(msm_soc_device, &image_version);
+	err |= device_create_file(msm_soc_device, &image_variant);
+	err |= device_create_file(msm_soc_device, &image_crm_version);
+	err |= device_create_file(msm_soc_device, &select_image);
 
 	switch (legacy_format) {
 	case 10:
 	case 9:
-		 device_create_file(msm_soc_device,
+		err |= device_create_file(msm_soc_device,
 					&msm_soc_attr_foundry_id);
 	case 8:
 	case 7:
-		device_create_file(msm_soc_device,
+	    err |= device_create_file(msm_soc_device,
 					&msm_soc_attr_pmic_model);
-		device_create_file(msm_soc_device,
+		err |= device_create_file(msm_soc_device,
 					&msm_soc_attr_pmic_die_revision);
 	case 6:
-		device_create_file(msm_soc_device,
+		err |= device_create_file(msm_soc_device,
 					&msm_soc_attr_platform_subtype);
-		device_create_file(msm_soc_device,
+		err |= device_create_file(msm_soc_device,
 					&msm_soc_attr_platform_subtype_id);
 	case 5:
-		device_create_file(msm_soc_device,
+		err |= device_create_file(msm_soc_device,
 					&msm_soc_attr_accessory_chip);
 	case 4:
-		device_create_file(msm_soc_device,
+		err |= device_create_file(msm_soc_device,
 					&msm_soc_attr_platform_version);
 	case 3:
-		device_create_file(msm_soc_device,
+		err |= device_create_file(msm_soc_device,
 					&msm_soc_attr_hw_platform);
 	case 2:
-		device_create_file(msm_soc_device,
+		err |= device_create_file(msm_soc_device,
 					&msm_soc_attr_raw_id);
-		device_create_file(msm_soc_device,
+		err |= device_create_file(msm_soc_device,
 					&msm_soc_attr_raw_version);
 	case 1:
-		device_create_file(msm_soc_device,
+		err |= device_create_file(msm_soc_device,
 					&msm_soc_attr_build_id);
 		break;
 	default:
@@ -1093,6 +1094,8 @@ static void __init populate_soc_sysfs_files(struct device *msm_soc_device)
 		break;
 	}
 
+	if (err)
+		pr_err("%s:Failed to create soc attribute files.\n", __func__);
 	return;
 }
 
