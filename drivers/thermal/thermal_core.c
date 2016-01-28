@@ -1906,6 +1906,7 @@ EXPORT_SYMBOL_GPL(thermal_notify_framework);
 static int create_trip_attrs(struct thermal_zone_device *tz, int mask)
 {
 	int indx;
+	int result;
 	int size = sizeof(struct thermal_attr) * tz->trips;
 
 	tz->trip_type_attrs = kzalloc(size, GFP_KERNEL);
@@ -1940,8 +1941,13 @@ static int create_trip_attrs(struct thermal_zone_device *tz, int mask)
 		tz->trip_type_attrs[indx].attr.show = trip_point_type_show;
 		tz->trip_type_attrs[indx].attr.store = trip_point_type_activate;
 
-		device_create_file(&tz->device,
+		result = device_create_file(&tz->device,
 				   &tz->trip_type_attrs[indx].attr);
+		if (result) {
+			pr_err("%s: Unable to create trip type attributes.", __func__);
+			return result;
+		}
+
 
 		/* create trip temp attribute */
 		snprintf(tz->trip_temp_attrs[indx].name, THERMAL_NAME_LENGTH,
@@ -1958,8 +1964,12 @@ static int create_trip_attrs(struct thermal_zone_device *tz, int mask)
 							trip_point_temp_store;
 		}
 
-		device_create_file(&tz->device,
+		result = device_create_file(&tz->device,
 				   &tz->trip_temp_attrs[indx].attr);
+		if (result) {
+			pr_err("%s: Unable to create trip temp attributes.", __func__);
+			return result;
+		}
 
 		/* create Optional trip hyst attribute */
 		if (!tz->ops->get_trip_hyst)
