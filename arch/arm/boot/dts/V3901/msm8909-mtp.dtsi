@@ -177,7 +177,8 @@
 		qcom,disp-maxy = <854>;
 		qcom,panel-maxx = <480>;
 		qcom,panel-maxy = <946>;
-		qcom,key-codes = <139 172 158>;
+		//qcom,key-codes = <139 172 158>;
+		qcom,key-codes = <158 172 139>;
 		qcom,y-offset = <0>;
 	};
 
