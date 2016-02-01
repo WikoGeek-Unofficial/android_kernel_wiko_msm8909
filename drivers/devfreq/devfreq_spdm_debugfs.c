@@ -38,8 +38,8 @@ static ssize_t enable_write(struct file *file, const char __user *data,
 		return -EINVAL;
 
 	if (copy_from_user(buf, data, size)) {
-		goto err;
 		size = -EINVAL;
+		goto err;
 	}
 
 	if (sscanf(buf, "%u\n", &i) != 1) {
