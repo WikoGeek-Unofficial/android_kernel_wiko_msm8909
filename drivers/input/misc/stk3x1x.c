@@ -3130,10 +3130,11 @@ static enum hrtimer_restart stk_ps_tune0_timer_func(struct hrtimer *timer)
 #ifdef STK_POLL_ALS
 
 #ifdef STK_LUX_MAP
-static uint16_t g_lux_sensor_map[9] = 
-{5,60,140,200,300,500,800,1200,1600};
-static uint16_t g_lux_to_sys_map[10] = 
-{0,15, 50,105,170,250,850,1000,1600,2600};
+static uint16_t g_lux_sensor_map[11] = 
+{5,60,120,240,450,680,1100,1800,2500,3360,4250};
+static uint16_t g_lux_to_sys_map[11] = 
+//{0,15, 50,105,170,250,850,1000,1600,2600};
+{0,15,40, 90,160,250,400,650, 900,1200,1500};
 #define SENSOR_MAP_LENGTH  (sizeof(g_lux_sensor_map) / sizeof(g_lux_sensor_map[0]))
 
 static int g_ffbm_flag =0xffff;
