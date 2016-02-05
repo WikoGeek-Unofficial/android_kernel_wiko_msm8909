@@ -120,6 +120,14 @@
 #define PINCTRL_STATE_SUSPEND	"pmx_ts_suspend"
 #define PINCTRL_STATE_RELEASE	"pmx_ts_release"
 
+#ifdef CONFIG_TINNO_DEV_INFO
+#include <linux/proc_fs.h>
+#include <asm/uaccess.h>
+DEF_TINNO_DEV_INFO(TouchPanel)
+DEF_TINNO_DEV_INFO(TouchPanel_Fw_Ver)
+static char des_buf[100];
+#endif
+
 /*******************************************************************************
 * Private enumerations, structures and unions using typedef
 *******************************************************************************/
@@ -572,7 +580,7 @@ static void fts_report_value(struct fts_ts_data *data)
 		{
 			input_mt_report_slot_state(data->input_dev, MT_TOOL_FINGER, true);
 			input_report_abs(data->input_dev, ABS_MT_TOUCH_MAJOR, event->area[i]);
-			input_report_abs(data->input_dev, ABS_MT_PRESSURE, event->pressure[i]);
+			//input_report_abs(data->input_dev, ABS_MT_PRESSURE, event->pressure[i]);
 			input_report_abs(data->input_dev, ABS_MT_POSITION_X, event->au16_x[i]);
 			input_report_abs(data->input_dev, ABS_MT_POSITION_Y, event->au16_y[i]);
 			touchs |= BIT(event->au8_finger_id[i]);
@@ -1723,7 +1731,7 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	input_set_abs_params(input_dev, ABS_MT_POSITION_X, pdata->x_min, pdata->x_max, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_POSITION_Y, pdata->y_min, pdata->y_max, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_TOUCH_MAJOR, 0, 0x0f, 0, 0);
-	input_set_abs_params(input_dev, ABS_MT_PRESSURE, 0, 0xff, 0, 0);
+	//input_set_abs_params(input_dev, ABS_MT_PRESSURE, 0, 0xff, 0, 0);
 
 	err = input_register_device(input_dev);
 	if (err) {
@@ -1922,6 +1930,16 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 
 	fts_update_fw_ver(data);
 	fts_update_fw_vendor_id(data);
+
+#ifdef CONFIG_TINNO_DEV_INFO
+	CAREAT_TINNO_DEV_INFO(TouchPanel);
+	CAREAT_TINNO_DEV_INFO(TouchPanel_Fw_Ver);
+	sprintf(des_buf, "FOCALTECH-FT6336-V3901-%d.%d.%d",
+		data->fw_ver[0], data->fw_ver[1], data->fw_ver[2]);
+	SET_DEVINFO_STR(TouchPanel, des_buf);
+	sprintf(des_buf, "%d.%d.%d", data->fw_ver[0], data->fw_ver[1], data->fw_ver[2]);
+	SET_DEVINFO_STR(TouchPanel_Fw_Ver, des_buf);
+#endif
 
 	FTS_STORE_TS_INFO(data->ts_info, data->family_id, data->pdata->name,
 			data->pdata->num_max_touches, data->pdata->group_id,
