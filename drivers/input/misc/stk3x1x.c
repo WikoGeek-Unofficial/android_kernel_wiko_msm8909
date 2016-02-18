@@ -273,7 +273,7 @@ extern int sprd_3rdparty_gpio_pls_irq;
 static struct stk3x1x_platform_data stk3x1x_pfdata={ 
   .state_reg = 0x0,    /* disable all */ 
   .psctrl_reg = 0x31,    /* ps_persistance=1, ps_gain=64X, PS_IT=0.391ms */ 
-  .alsctrl_reg = 0x2A, 	/* als_persistance=1, als_gain=16X, ALS_IT=200ms */
+  .alsctrl_reg = 0x2E, 	/* als_persistance=1, als_gain=16X, ALS_IT=200ms */
   .ledctrl_reg = 0xFF,   /* 100mA IRDR, 64/64 LED duty */ 
   .wait_reg = 0x07,    /* 50 ms */   
   .ps_thd_h =1700, 
