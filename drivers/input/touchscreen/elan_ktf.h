@@ -144,10 +144,10 @@ uint8_t* file_fw_data = NULL;
 
 uint8_t huaruichuan_fw[]=
 {
-#ifdef CONFIG_TINNO_L5221
-	#include "tinno_qualcomm_L5221.i"
-#else
+#ifdef CONFIG_TINNO_V3901
 	#include "tinno_qualcomm_V3901.i"
+#else
+	#include "tinno_qualcomm_L5221.i"
 #endif
 };
 

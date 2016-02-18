@@ -430,7 +430,11 @@ ts->x_resolution=480;
     elan_info( "[elan] %s: firmware BC: 0x%4.4x\n",__func__, ts->fw_bcd);
     elan_info( "[elan] %s: x resolution: %d, y resolution: %d\n",__func__, ts->x_resolution, ts->y_resolution);
 #ifdef  CONFIG_TINNO_DEV_INFO
+#ifdef CONFIG_TINNO_V3901
+    sprintf(des_buf, "HUARUIC-EKTF2232-V3901-%x",ts->fw_ver);
+#else
     sprintf(des_buf, "HUARUIC-EKTF2232-L5221-%x",ts->fw_ver);
+#endif
     SET_DEVINFO_STR(TouchPanel,des_buf);
     sprintf(des_buf, "%x",ts->fw_ver);
     SET_DEVINFO_STR(TouchPanel_Fw_Ver,des_buf);
@@ -552,14 +556,14 @@ void update_fw_one(struct i2c_client *client)
     int curIndex = 0;
 
 #ifdef ELAN_2K_XX
-#ifdef CONFIG_TINNO_L5221
-	uint8_t isp_cmd[] = {0x54, 0x00, 0x12, 0x34};    //54 00 12 34
-	iap_mod = 2;
-	PageNum = 249;
-#else
+#ifdef CONFIG_TINNO_V3901
 	uint8_t isp_cmd[] = {0x45, 0x49, 0x41, 0x50};    //45 49 41 50
 	iap_mod = 3;
 	PageNum = 377;
+#else
+	uint8_t isp_cmd[] = {0x54, 0x00, 0x12, 0x34};    //54 00 12 34
+	iap_mod = 2;
+	PageNum = 249;
 #endif
 #endif
 
@@ -1568,12 +1572,12 @@ static int check_update_flage(struct elan_ts_data *ts)
     }
 
 #ifdef ELAN_2K_XX
-#ifdef CONFIG_TINNO_L5221
-        New_FW_ID = file_fw_data[0x7BD3]<<8 | file_fw_data[0x7BD2];
-        NEW_FW_VERSION = file_fw_data[0x7BD1]<<8 | file_fw_data[0x7BD0];
-#else
+#ifdef CONFIG_TINNO_V3901
         New_FW_ID = file_fw_data[0xBDD3]<<8 | file_fw_data[0xBDD2];
         NEW_FW_VERSION = file_fw_data[0xBDD1]<<8 | file_fw_data[0xBDD0];
+#else
+        New_FW_ID = file_fw_data[0x7BD3]<<8 | file_fw_data[0x7BD2];
+        NEW_FW_VERSION = file_fw_data[0x7BD1]<<8 | file_fw_data[0x7BD0];
 #endif
 
 #endif
