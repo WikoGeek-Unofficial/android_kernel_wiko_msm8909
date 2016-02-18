@@ -552,9 +552,15 @@ void update_fw_one(struct i2c_client *client)
     int curIndex = 0;
 
 #ifdef ELAN_2K_XX
-    uint8_t isp_cmd[] = {0x54, 0x00, 0x12, 0x34};    //54 00 12 34
-    iap_mod = 2;
+#ifdef CONFIG_TINNO_L5221
+	uint8_t isp_cmd[] = {0x54, 0x00, 0x12, 0x34};    //54 00 12 34
+	iap_mod = 2;
 	PageNum = 249;
+#else
+	uint8_t isp_cmd[] = {0x45, 0x49, 0x41, 0x50};    //45 49 41 50
+	iap_mod = 3;
+	PageNum = 377;
+#endif
 #endif
 
 #ifdef ELAN_3K_XX
@@ -1562,13 +1568,14 @@ static int check_update_flage(struct elan_ts_data *ts)
     }
 
 #ifdef ELAN_2K_XX
-#if 0
-        New_FW_ID = file_fw_data[0x7DB3]<<8  | file_fw_data[0x7DB2];
-        NEW_FW_VERSION = file_fw_data[0x7DB1]<<8  | file_fw_data[0x7DB0];
-#else
+#ifdef CONFIG_TINNO_L5221
         New_FW_ID = file_fw_data[0x7BD3]<<8 | file_fw_data[0x7BD2];
         NEW_FW_VERSION = file_fw_data[0x7BD1]<<8 | file_fw_data[0x7BD0];
+#else
+        New_FW_ID = file_fw_data[0xBDD3]<<8 | file_fw_data[0xBDD2];
+        NEW_FW_VERSION = file_fw_data[0xBDD1]<<8 | file_fw_data[0xBDD0];
 #endif
+
 #endif
 
 #ifdef ELAN_3K_XX

@@ -144,7 +144,11 @@ uint8_t* file_fw_data = NULL;
 
 uint8_t huaruichuan_fw[]=
 {
-#include "tinno_qualcomm_L5221.i"
+#ifdef CONFIG_TINNO_L5221
+	#include "tinno_qualcomm_L5221.i"
+#else
+	#include "tinno_qualcomm_V3901.i"
+#endif
 };
 
 struct vendor_map
@@ -155,8 +159,9 @@ struct vendor_map
 };
 const struct vendor_map g_vendor_map[]=
 {
-	{0x2ae2,"hrc",huaruichuan_fw},
-	{0x2ae1,"hrc",huaruichuan_fw}
+	{0x2ae2, "hrc", huaruichuan_fw},
+	{0x2ae1, "hrc", huaruichuan_fw},
+	{0x2aef, "hrc", huaruichuan_fw},
 };
 
     enum
