@@ -1293,7 +1293,7 @@ int msm_camera_power_up(struct msm_camera_power_ctrl_t *ctrl,
 			if (!ctrl->gpio_conf->gpio_num_info->valid
 				[power_setting->seq_val])
 				continue;
-			pr_err("%s:%d gpio %d  set val %d\n", __func__, __LINE__,
+			pr_err("Ramiel %s:%d gpio %d  set val %d\n", __func__, __LINE__,
 				ctrl->gpio_conf->gpio_num_info->gpio_num[power_setting->seq_val]-911,(int) power_setting->config_val);
 			gpio_set_value_cansleep(
 				ctrl->gpio_conf->gpio_num_info->gpio_num
@@ -1487,10 +1487,25 @@ int msm_camera_power_down(struct msm_camera_power_ctrl_t *ctrl,
 			if (!ctrl->gpio_conf->gpio_num_info->valid
 				[pd->seq_val])
 				continue;
+			//Ramiel add for power off charge +++++ 2016.2.24
+			#if 0
 			gpio_set_value_cansleep(
-				ctrl->gpio_conf->gpio_num_info->gpio_num
+			ctrl->gpio_conf->gpio_num_info->gpio_num
 				[pd->seq_val],
 				(int) pd->config_val);
+			#endif 
+
+			gpio_set_value_cansleep(
+			ctrl->gpio_conf->gpio_num_info->gpio_num
+				[pd->seq_val],
+				0);
+
+			pr_err("Ramiel %s:%d gpio %d  set val %d\n", __func__, __LINE__,
+							ctrl->gpio_conf->gpio_num_info->gpio_num
+				[pd->seq_val]-911,(int) pd->config_val);
+			//Ramiel add for power off charge ------ 2016.2.24
+
+			
 			break;
 		case SENSOR_VREG:
 			if (pd->seq_val >= CAM_VREG_MAX) {

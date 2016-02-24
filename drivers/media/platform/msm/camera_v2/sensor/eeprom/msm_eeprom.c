@@ -1185,7 +1185,7 @@ static int msm_eeprom_i2c_probe(struct i2c_client *client,
 
 	rc = of_property_read_string(client->dev.of_node, "qcom,eeprom-name",
 		&eb_info->eeprom_name);
-	CDBG("%s qcom,eeprom-name %s, rc %d\n", __func__,
+	pr_err("%s qcom,eeprom-name %s, rc %d\n", __func__,
 		eb_info->eeprom_name, rc);
 	if (rc < 0) {
 		pr_err("%s failed %d\n", __func__, __LINE__);
@@ -1223,7 +1223,7 @@ static int msm_eeprom_i2c_probe(struct i2c_client *client,
 		goto i2c_power_down;
 	}
 	for (j = 0; j < e_ctrl->cal_data.num_data; j++)
-		CDBG("memory_data[%d] = 0x%X\n", j,
+		pr_err("memory_data[%d] = 0x%X\n", j,
 			e_ctrl->cal_data.mapdata[j]);
 
 	e_ctrl->is_supported |= msm_eeprom_match_crc(&e_ctrl->cal_data);
