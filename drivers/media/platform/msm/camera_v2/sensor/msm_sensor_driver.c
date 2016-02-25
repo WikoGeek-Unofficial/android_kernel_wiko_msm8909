@@ -930,16 +930,20 @@ int32_t msm_sensor_driver_probe(void *setting,
 		goto free_camera_info;
 	}
 
-	printk("YGYG %s   %s probe succeeded", __func__,slave_info->sensor_name);
+	printk("YGYG %s   %s probe succeeded raw \n", __func__,slave_info->sensor_name);
 	
 	#ifdef CONFIG_TINNO_DEV_INFO
-	printk("YC %s position %d \n", __func__,s_ctrl->sensordata->sensor_info->position);
+	printk("YC %s position %d  %s \n", __func__,s_ctrl->sensordata->sensor_info->position,slave_info->sensor_name);
 
 
 	if(s_ctrl->sensordata->sensor_info->position==0){
 		
 		if(strcmp(slave_info->sensor_name, "ov5648_sunwin") == 0)
 		sprintf(main_des_buf, "%s","ov5648_sunwin(5M|interp:null)");
+		else if(strcmp(slave_info->sensor_name, "ov5670_sunwin_v3901") == 0)
+		sprintf(main_des_buf, "%s","ov5670_sunwin_v3901(5M|interp:null)");
+		else if(strcmp(slave_info->sensor_name, "ov5670_cmk_v3901") == 0)
+		sprintf(main_des_buf, "%s","ov5670_cmk_v3901(5M|interp:null)");
 		else
 		sprintf(main_des_buf, "%s",slave_info->sensor_name);
 		
@@ -947,10 +951,16 @@ int32_t msm_sensor_driver_probe(void *setting,
 	SET_DEVINFO_STR(main_camera,main_des_buf);
 	camera_found_number++;
 	}
-	else if(s_ctrl->sensordata->sensor_info->position==1){
-		
+	else if((s_ctrl->sensordata->sensor_info->position==1)||
+		(s_ctrl->sensordata->sensor_info->position==2))
+	{
+
 		if(strcmp(slave_info->sensor_name, "ov5670_sunwin") == 0)
 		sprintf(sub_des_buf, "%s","ov5670_sunwin(5M|interp:null)");
+		else if(strcmp(slave_info->sensor_name, "sp2508_8909") == 0)
+		sprintf(sub_des_buf, "%s","sp2508_8909(2M|interp:null)");
+		else if(strcmp(slave_info->sensor_name, "gc2355_8909") == 0)
+		sprintf(sub_des_buf, "%s","gc2355_8909(2M|interp:null)");
 		else
 		sprintf(sub_des_buf, "%s",slave_info->sensor_name);
 
