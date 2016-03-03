@@ -7842,8 +7842,8 @@ static int bma2x2_probe(struct i2c_client *client,
 		DOUBLE_TAP_INTERRUPT);
 	input_set_capability(dev_interrupt, EV_REL,
 		SINGLE_TAP_INTERRUPT);
-	input_set_capability(dev_interrupt, EV_ABS,
-		ORIENT_INTERRUPT);
+	/*input_set_capability(dev_interrupt, EV_ABS,
+		ORIENT_INTERRUPT);*/
 	input_set_capability(dev_interrupt, EV_ABS,
 		FLAT_INTERRUPT);
 	input_set_drvdata(dev_interrupt, data);
