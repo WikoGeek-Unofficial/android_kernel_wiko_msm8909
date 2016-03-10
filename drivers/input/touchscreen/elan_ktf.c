@@ -2166,7 +2166,13 @@ static int elan_ts_probe(struct i2c_client *client, const struct i2c_device_id *
 #if defined IAP_PORTION
 	get_vendor_info(ts);
     if (file_fw_data != NULL){
+	//{ Modify by Zidong: Disable firmware update in ftm mode
+	#define STRING_BOOT_FTM_MODE "androidboot.mode=ffbm-01"
+	if (!strstr(saved_command_line, STRING_BOOT_FTM_MODE)) {
 		elan_ts_handler_event(ts);
+	}
+	//}
+
     }
 
 #endif
