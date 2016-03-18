@@ -3291,14 +3291,17 @@ static void stk_als_poll_work_func(struct work_struct *work)
 
 	ts = ktime_get_boottime();
 	reading_lux = stk_alscode2lux(ps_data, reading);
-	if(abs(ps_data->als_lux_last - reading_lux) >= STK_ALS_CHANGE_THD)
+	#ifdef STK_LUX_MAP
+	if(0xffff == g_ffbm_flag)
+	{
+           	g_ffbm_flag = 0;
+        	stk_read_ffbm_flag();
+    	}
+	#endif
+	printk(KERN_INFO "g_ffbm_flag =  %d lux\n",g_ffbm_flag);		
+	if((abs(ps_data->als_lux_last - reading_lux) >= STK_ALS_CHANGE_THD)||(1 == g_ffbm_flag))
 	{
 		#ifdef STK_LUX_MAP
-		if(0xffff == g_ffbm_flag)
-		{
-	           	g_ffbm_flag = 0;
-            		stk_read_ffbm_flag();
-        	}
 		if(0 == g_ffbm_flag)
 		{
 			luxval_temp = reading_lux;
