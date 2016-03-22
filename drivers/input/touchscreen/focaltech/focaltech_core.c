@@ -1972,13 +1972,10 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 		 }
 	#endif
 
-	/*
 	#ifdef FTS_AUTO_UPGRADE
 	printk("********************Enter CTP Auto Upgrade********************\n");
 	fts_ctpm_auto_upgrade(client);
 	#endif 
-	*/
-
 	
 #if defined(CONFIG_FB)
 	data->fb_notif.notifier_call = fb_notifier_callback;
