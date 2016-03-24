@@ -811,52 +811,57 @@ static void elan_ts_touch_up(struct elan_ts_data* ts,s32 id,s32 x,s32 y)
 }
 static void elan_ts_report_key(struct elan_ts_data *ts, uint8_t button_data)
 {
-    unsigned int key_value = 0;
-    static unsigned int key_value_pre = 0;	
-    static unsigned int x = 0, y = 0;
+	unsigned int key_value = 0;
+	static unsigned int key_value_pre = 0;
+	static unsigned int x = 0, y = 0;
 
-    switch (button_data) {
-        case ELAN_KEY_BACK:
-            key_value = KEY_BACK;
-	     x=400;
-	     y=900;
-            break;
-        case ELAN_KEY_HOME:
-            key_value = KEY_HOMEPAGE;
-	     x=240;
-	     y=900;
-            break;
-        case ELAN_KEY_MENU:
-            key_value = KEY_MENU;
-	     x=80;
-	     y=900;
-            break;
-        default:
-	     key_value = 0;
-	     x=80;
-	     y=900;	
-            break;
-    }
-	    if(boot_mode==FTM_MODE){
-		if(key_value!=0)
-		{
-		     input_report_key(ts->input_dev, key_value, 1);
-		     input_sync(ts->input_dev);
-		}else{
-		    input_report_key(ts->input_dev, key_value_pre, 0);
-		    input_sync(ts->input_dev);
+	switch (button_data) {
+	case ELAN_KEY_BACK:
+#ifdef CONFIG_TINNO_V3901
+		if (boot_mode == FTM_MODE)
+			key_value = KEY_MENU;
+		else
+#endif
+			key_value = KEY_BACK;
+		x = 400;
+		y = 900;
+		break;
+	case ELAN_KEY_HOME:
+		key_value = KEY_HOMEPAGE;
+		x = 240;
+		y = 900;
+		break;
+	case ELAN_KEY_MENU:
+#ifdef CONFIG_TINNO_V3901
+		if (boot_mode == FTM_MODE)
+			key_value = KEY_BACK;
+		else
+#endif
+			key_value = KEY_MENU;
+		x = 80;
+		y = 900;
+		break;
+	default:
+		key_value = 0;
+		x = 80;
+		y = 900;
+		break;
+	}
+	if (boot_mode == FTM_MODE) {
+		if (key_value != 0) {
+			input_report_key(ts->input_dev, key_value, 1);
+			input_sync(ts->input_dev);
+		} else {
+			input_report_key(ts->input_dev, key_value_pre, 0);
+			input_sync(ts->input_dev);
 		}
-           }else{
-	           	if(key_value!=0)
-			{
-  				 elan_ts_touch_down(ts, VIRTUAL_TOUCH_KEY_INDEX, x, y, 60);
-	           	}
-	    }
-           if((key_value==0))
-           {
-		     elan_ts_touch_up(ts, 0, 0, 0);	
-	     }
-	     key_value_pre= key_value;
+	} else {
+		if (key_value != 0)
+			elan_ts_touch_down(ts, VIRTUAL_TOUCH_KEY_INDEX, x, y, 60);
+	}
+	if (key_value == 0)
+		elan_ts_touch_up(ts, 0, 0, 0);
+	key_value_pre= key_value;
 }
 
 
