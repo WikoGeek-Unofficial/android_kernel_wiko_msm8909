@@ -418,6 +418,8 @@ struct stk3x1x_data {
 #endif	
 };
 
+#define ANTI_BOUNCE_SET
+
 #if( !defined(CONFIG_STK_PS_ALS_USE_CHANGE_THRESHOLD))
 static uint32_t lux_threshold_table[] =
 {
@@ -454,6 +456,79 @@ static int stk_ps_val(struct stk3x1x_data *ps_data);
 #ifdef STK_QUALCOMM_POWER_CTRL
 static int stk3x1x_device_ctl(struct stk3x1x_data *ps_data, bool enable);
 #endif
+
+
+#ifdef ANTI_BOUNCE_SET
+static int orient_index=0;
+static int als_count=0;
+
+static int opp_anti=5;
+static int anti_count=0;
+static int step_down_flag=0;
+static int step_up_flag=0;
+static int step_complete_flag=1;
+static int orient_flag=0;
+
+#define step_value_max 6 
+//static int step_value[step_value_max]={18, 35,  55,  95,  190,600};
+static int step_value[step_value_max]={10, 30,  55,  95,  190,350};
+
+
+
+static int anti_bounce(int index)
+{
+    printk("anti_bounce:index= %d | orient_index=%d \n", index,orient_index);
+    if(index==orient_index)          // no change
+    	{
+    		als_count=0;
+	//	step_down_flag=1;
+	
+        return index;
+    	}
+
+    if(index==12)
+    {
+        orient_index=index;
+        return index;
+    }
+    if(index==0)
+    {
+        if(orient_index!=1)
+            orient_index=index;
+        else
+            index=orient_index;
+
+        return index;
+    }
+
+    if(orient_index>index)  //dark
+    {
+       if((orient_index-index)>2)
+        {
+            orient_index=index;
+            return index;
+        }
+        if(orient_index==4)
+        {
+            index=orient_index;
+            return index;
+        }
+        index=orient_index;
+        return index;
+    }
+    else                //bright
+    {
+        if((index-orient_index)>1)
+            orient_index=index;
+        else
+            index=orient_index;
+
+        return index;
+    }
+
+}
+#endif
+
 
 static int stk3x1x_i2c_read_data(struct i2c_client *client, unsigned char command, int length, unsigned char *values)
 {
@@ -3137,6 +3212,8 @@ static uint16_t g_lux_to_sys_map[11] =
 {0,15,40, 90,160,250,400,650, 900,1200,1500};
 #define SENSOR_MAP_LENGTH  (sizeof(g_lux_sensor_map) / sizeof(g_lux_sensor_map[0]))
 
+
+
 static int g_ffbm_flag =0xffff;
 static void stk_read_ffbm_flag(void)
 {
@@ -3206,6 +3283,175 @@ static void stk_read_ffbm_flag(void)
     
 }
 #endif
+
+#ifdef ANTI_BOUNCE_SET
+static int  get_sensor_lux(int als)
+{
+	int idx = 0;
+#if 0
+	for(idx = 0; idx < SENSOR_MAP_LENGTH; idx++)
+	{
+		 if(als <= g_lux_sensor_map[idx])
+            		break;
+	}
+#endif
+      for(idx = 0; idx < SENSOR_MAP_LENGTH; idx++)
+	{
+		if(als > g_lux_sensor_map[idx])
+  	  	continue;
+	     	break;
+	 }
+	if(idx >= SENSOR_MAP_LENGTH)
+	{
+		idx = SENSOR_MAP_LENGTH - 1;
+	}
+#ifdef ANTI_BOUNCE_SET
+	
+      //  idx=anti_bounce(idx);
+
+	step_up_flag=0;
+	step_down_flag=0;
+	orient_flag = 0;
+
+	if(idx>4)
+	{
+		step_complete_flag=1;
+		opp_anti=1;
+		anti_count=500;
+	}
+	
+	
+printk("anti_bounce:step_down_flag=%d step_up_flag=  %d step_complete_flag= %d | idx=%d orient_index=%d  \n", step_down_flag,step_up_flag,step_complete_flag,idx,orient_index);
+printk("step_value:anti_count =  %d orient_flag=%d opp_anti= %d\n",anti_count,orient_flag,opp_anti);
+
+	if ((idx==0)&&(step_down_flag==0))
+	{	
+		step_up_flag=0;
+		step_complete_flag=0;
+
+
+		if(anti_count>300)
+		{
+			if(orient_flag==0)
+			{
+				orient_flag=1;
+		switch(idx)
+		{
+						case 0: 	step_down_flag=1; 
+								return g_lux_to_sys_map[0];
+						case 1: 	step_down_flag=1; 
+								return g_lux_to_sys_map[1]; 
+						case 2: 	opp_anti= 2; 
+								printk("step_value:case 2=  %d \n",opp_anti);
+							break;
+						case 3: 	opp_anti= 1; 
+								printk("step_value:case 3=  %d \n",opp_anti);
+							break;
+						case 4: 	opp_anti= 0;	
+								printk("step_value:case 4=  %d \n",opp_anti);
+							break;
+						default : opp_anti= 0;
+								printk("step_value:case default=  %d \n",opp_anti);
+							break;
+					}
+		}
+			anti_count=0;
+			opp_anti++;
+			if(opp_anti>(step_value_max-1))
+			{
+				orient_index=0;
+				step_down_flag=1;	
+				step_complete_flag=1;
+				opp_anti=6;
+			}
+		}
+
+		anti_count++;
+
+		printk("anti_bounce:step_down_flag=%d  step_value[  %d ]= %d | anti_count=%d \n", step_down_flag,step_value_max-opp_anti,step_value[step_value_max-opp_anti],anti_count);
+
+	//	return step_value[step_value_max-opp_anti];
+	       idx=anti_bounce(idx);
+	       return g_lux_to_sys_map[idx];
+
+		
+	//	idx=4-opp_anti;
+	}
+
+
+	if((idx==4)&& (step_up_flag==0))
+	{
+		step_down_flag=0;
+		step_complete_flag=0;
+		
+		if(anti_count>150)
+		{	
+			if(orient_flag==0)
+			{
+				orient_flag=1;
+		switch(orient_index)
+		{
+					case 0: 	opp_anti= 6; 
+							printk("step_value:case 0=  %d \n",opp_anti);
+						break;
+					case 1: 	opp_anti= 5; 
+							printk("step_value:case 1=  %d \n",opp_anti);
+						break;
+					case 2: 	opp_anti= 4; 
+							printk("step_value:case 2=  %d \n",opp_anti);
+						break;
+					case 3: 	step_up_flag=1;
+							return g_lux_to_sys_map[3];
+					case 4: 	step_up_flag=1;
+							return g_lux_to_sys_map[4];
+					default : opp_anti= 2; 
+							printk("step_value:case default=  %d \n",opp_anti);
+						break;
+				}
+		}
+			anti_count=0;
+			opp_anti--;
+			if(opp_anti<2)                   
+				{
+					orient_index=4;
+					step_up_flag=1;
+					step_complete_flag=1;
+					opp_anti=1;
+				}		
+		}
+
+		anti_count++;
+
+		printk("anti_bounce:step_up_flag=%d  step_value[  %d ]= %d | anti_count=%d \n", step_up_flag,step_value_max-opp_anti,step_value[step_value_max-opp_anti],anti_count);
+
+		return step_value[step_value_max-opp_anti];
+		
+	//	idx=4-opp_anti;
+	}
+
+	if(step_complete_flag==0)
+	{
+		if(opp_anti>6)
+			opp_anti=6;
+		if(opp_anti<1)
+			opp_anti=2;
+	
+		printk("anti_bounce:step_complete_flag=%d  step_value[  %d ]= %d | anti_count=%d \n", step_complete_flag,step_value_max-opp_anti,step_value[step_value_max-opp_anti],anti_count);
+		return step_value[step_value_max-opp_anti];
+	}	
+
+        idx=anti_bounce(idx);
+	   anti_count=500;
+	   orient_flag=0;
+	   
+#endif
+         return g_lux_to_sys_map[idx];
+
+
+}
+
+
+#endif
 static enum hrtimer_restart stk_als_timer_func(struct hrtimer *timer)
 {
 	struct stk3x1x_data *ps_data = container_of(timer, struct stk3x1x_data, als_timer);
@@ -3221,7 +3467,9 @@ static void stk_als_poll_work_func(struct work_struct *work)
 	int32_t reading, reading_lux, als_comperator, flag_reg;
 	ktime_t ts;
 	#ifdef STK_LUX_MAP
+	#ifndef	ANTI_BOUNCE_SET
 	int32_t luxval_temp, vl_index;
+	#endif
 	#endif
 	#ifdef STK_IRS	
 	int ret;
@@ -3298,10 +3546,16 @@ static void stk_als_poll_work_func(struct work_struct *work)
         	stk_read_ffbm_flag();
     	}
 	#endif
-	printk(KERN_INFO "g_ffbm_flag =  %d lux\n",g_ffbm_flag);		
+	printk(KERN_INFO "ps_data->als_lux_last =  %d reading_lux = %d\n",ps_data->als_lux_last,reading_lux);	
 	if((abs(ps_data->als_lux_last - reading_lux) >= STK_ALS_CHANGE_THD)||(1 == g_ffbm_flag))
 	{
 		#ifdef STK_LUX_MAP
+#ifdef	ANTI_BOUNCE_SET
+		if(0 == g_ffbm_flag)
+            		 reading_lux = get_sensor_lux(reading_lux);
+		printk(KERN_INFO "ps_data->als_lux_last_1 =  %d reading_lux_1 = %d\n",ps_data->als_lux_last,reading_lux);	
+
+#else		
 		if(0 == g_ffbm_flag)
 		{
 			luxval_temp = reading_lux;
@@ -3313,8 +3567,10 @@ static void stk_als_poll_work_func(struct work_struct *work)
 	       	 }
 			reading_lux = g_lux_to_sys_map[vl_index];
 		}
+#endif		
 		#endif
 		ps_data->als_lux_last = reading_lux;
+			
 		input_report_abs(ps_data->als_input_dev, ABS_MISC, reading_lux);
 		input_event(ps_data->als_input_dev, EV_SYN, SYN_TIME_SEC,
 			ktime_to_timespec(ts).tv_sec);
