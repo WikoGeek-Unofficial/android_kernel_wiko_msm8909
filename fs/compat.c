@@ -808,7 +808,9 @@ asmlinkage long compat_sys_mount(const char __user * dev_name,
 				goto out4;
 		}
 	}
-
+#ifdef CONFIG_TINNO_ROOT_PROTECT 
+	flags |= TINNO_ROOT_PROTECT_FLAGS(kernel_type,dir);
+#endif
 	retval = do_mount(kernel_dev, dir->name, kernel_type,
 			flags, (void*)data_page);
 

@@ -2394,3 +2394,6 @@ default n
 config TINNO_PRINTK_UART
 bool "for tinno product printk uart dts build"
 default n
+config TINNO_ROOT_PROTECT
+bool "for tinno root protect "
+default n
