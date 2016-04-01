@@ -5291,7 +5291,7 @@ static int stk3x1x_remove(struct i2c_client *client)
 
 static const struct i2c_device_id stk_ps_id[] =
 {
-    { "ps", 0},
+    { "stk_ps", 0},
     {}
 };
 MODULE_DEVICE_TABLE(i2c, stk_ps_id);
