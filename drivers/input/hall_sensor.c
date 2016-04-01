@@ -381,8 +381,22 @@ static struct platform_driver hall_driver = {
 	.id_table = hall_id,
 };
 
+// LION.LI, DATE20160401, NOTE, BugFCCBM-768 wiko unify START
+#ifdef CONFIG_WIKO_UNIFY
+static int Hall;
+core_param(Hall, Hall, int, 0444);
+#endif  /* CONFIG_WIKO_UNIFY */
+// LION.LI, BugFCCBM-768 wiko unify END
 static int __init hall_init(void)
 {
+    // LION.LI, DATE20160401, NOTE, BugFCCBM-768 wiko unify START
+#ifdef CONFIG_WIKO_UNIFY
+    if (!Hall)
+    {
+        return 0;
+    }
+#endif  /* CONFIG_WIKO_UNIFY */
+    // LION.LI, BugFCCBM-768 wiko unify END
 	return platform_driver_register(&hall_driver);
 }
 

@@ -228,6 +228,15 @@
 	#define STK3X1X_VIO_MAX_UV	1950000
 #endif
 
+// LION.LI, DATE20160401, NOTE, BugFCCBM-768 wiko unify START
+#ifdef CONFIG_WIKO_UNIFY
+static int Proximity_sensor;
+static int Light_sensor;
+core_param(Proximity_sensor, Proximity_sensor, int, 0444);
+core_param(Light_sensor, Light_sensor, int, 0444);
+#endif  /* CONFIG_WIKO_UNIFY */
+// LION.LI, BugFCCBM-768 wiko unify END
+
 #ifdef QUALCOMM_PLATFORM
 
 static struct sensors_classdev sensors_light_cdev = {
@@ -4596,16 +4605,38 @@ static int stk3x1x_probe(struct i2c_client *client,
 	ps_data->als_cdev = sensors_light_cdev;
 	ps_data->als_cdev.sensors_enable = stk_als_enable_set;
 //	ps_data->als_cdev.sensors_poll_delay = stk_als_poll_delay_set;
-	err = sensors_classdev_register(&client->dev, &ps_data->als_cdev);
-	if (err)
-		goto err_stk3x1x_setup_irq;
+// LION.LI, DATE20160401, NOTE, BugFCCBM-768 wiko unify START
+#ifdef CONFIG_WIKO_UNIFY
+    if (Light_sensor) {
+        err = sensors_classdev_register(&client->dev, &ps_data->als_cdev);
+        if (err)
+            goto err_stk3x1x_setup_irq;
+    }
+#else
+       err = sensors_classdev_register(&client->dev, &ps_data->als_cdev);
+       if (err)
+               goto err_stk3x1x_setup_irq;
+#endif  /* CONFIG_WIKO_UNIFY */
+// LION.LI, BugFCCBM-768 wiko unify END
 
 	ps_data->ps_cdev = sensors_proximity_cdev;
 	ps_data->ps_cdev.sensors_enable = stk_ps_enable_set;
 //	ps_data->ps_cdev.sensors_poll_delay = stk_ps_poll_delay_set;
-	err = sensors_classdev_register(&client->dev, &ps_data->ps_cdev);
-	if (err)
-		goto err_class_sysfs;
+// LION.LI, DATE20160401, NOTE, BugFCCBM-768 wiko unify START
+#ifdef CONFIG_WIKO_UNIFY
+        if (Proximity_sensor) 
+        {
+            err = sensors_classdev_register(&client->dev, &ps_data->ps_cdev);
+            if (err)
+                goto err_class_sysfs;
+        }
+#else /* CONFIG_WIKO_UNIFY */
+        err = sensors_classdev_register(&client->dev, &ps_data->als_cdev);
+        if (err)
+            goto err_stk3x1x_setup_irq;
+
+#endif  /* CONFIG_WIKO_UNIFY */
+// LION.LI, BugFCCBM-768 wiko unify END
 #endif
 
 #ifdef STK_QUALCOMM_POWER_CTRL	

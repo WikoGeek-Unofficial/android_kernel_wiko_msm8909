@@ -8242,8 +8242,23 @@ static struct i2c_driver bma2x2_driver = {
 	.shutdown   = bma2x2_shutdown,
 };
 
+// LION.LI, DATE20160401, NOTE, BugFCCBM-768 wiko unify START
+#ifdef CONFIG_WIKO_UNIFY
+static int Acceleration_sensor;
+core_param(Acceleration_sensor, Acceleration_sensor, int, 0444);
+#endif  /* CONFIG_WIKO_UNIFY */
+// LION.LI, BugFCCBM-768 wiko unify END
+
 static int __init BMA2X2_init(void)
 {
+// LION.LI, DATE20160401, NOTE, BugFCCBM-768 wiko unify START
+#ifdef CONFIG_WIKO_UNIFY
+    if (!Acceleration_sensor)
+    {
+        return 0;
+    }
+#endif  /* CONFIG_WIKO_UNIFY */
+// LION.LI, BugFCCBM-768 wiko unify END
 	return i2c_add_driver(&bma2x2_driver);
 }
 

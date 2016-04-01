@@ -5043,8 +5043,24 @@ static struct usb_driver hub_driver = {
 	.supports_autosuspend =	1,
 };
 
+// LION.LI, DATE20160401, NOTE, BugFCCBM-768 wiko unify START
+#ifdef CONFIG_WIKO_UNIFY
+static int OTG_open;
+core_param(OTG_open, OTG_open, int, 0444);
+#endif  /* CONFIG_WIKO_UNIFY */
+// LION.LI, BugFCCBM-768 wiko unify END
+
 int usb_hub_init(void)
 {
+// LION.LI, DATE20160401, NOTE, BugFCCBM-768 wiko unify START
+#ifdef CONFIG_WIKO_UNIFY
+    if (!OTG_open)
+    {
+        return 0;
+    }
+#endif  /* CONFIG_WIKO_UNIFY */
+// LION.LI, BugFCCBM-768 wiko unify END
+
 	if (usb_register(&hub_driver) < 0) {
 		printk(KERN_ERR "%s: can't register hub driver\n",
 			usbcore_name);

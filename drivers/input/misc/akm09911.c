@@ -67,6 +67,13 @@ struct akm_sensor_state {
 	uint8_t mode;
 };
 
+// LION.LI, DATE20160401, NOTE, BugFCCBM-768 wiko unify START
+#ifdef CONFIG_WIKO_UNIFY
+static int Magnetic_sensor;
+core_param(Magnetic_sensor, Magnetic_sensor, int, 0444);
+#endif  /* CONFIG_WIKO_UNIFY */
+// LION.LI, BugFCCBM-768 wiko unify END
+
 struct akm_compass_data {
 	struct i2c_client	*i2c;
 	struct input_dev	*input;
@@ -2366,6 +2373,14 @@ static struct i2c_driver akm_compass_driver = {
 
 static int __init akm_compass_init(void)
 {
+        // LION.LI, DATE20160401, NOTE, BugFCCBM-768 wiko unify START
+#ifdef CONFIG_WIKO_UNIFY
+        if (!Magnetic_sensor)
+        {
+            return 0;
+        }
+#endif  /* CONFIG_WIKO_UNIFY */
+        // LION.LI, BugFCCBM-768 wiko unify END
 	pr_info("AKM compass driver: initialize.");
 	return i2c_add_driver(&akm_compass_driver);
 }

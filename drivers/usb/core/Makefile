@@ -2,6 +2,13 @@
 # Makefile for USB Core files and filesystem
 #
 
+#add for wiko unify macro
+WIKO_UNIFY_DEF := $(strip $(subst ro.wiko.type =,,$(shell cat $(PWD)/../build.ini |grep ^ro.wiko.type)))
+ifeq ($(strip $(WIKO_UNIFY_DEF)),unify)
+ccflags-y += -DCONFIG_WIKO_UNIFY
+$(warning ---add marco CONFIG_WIKO_UNIFY---)
+endif
+
 ccflags-$(CONFIG_USB_DEBUG) := -DDEBUG
 
 usbcore-y := usb.o hub.o hcd.o urb.o message.o driver.o
