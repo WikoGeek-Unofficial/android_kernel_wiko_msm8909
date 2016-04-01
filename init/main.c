@@ -87,8 +87,7 @@
 #include <asm/smp.h>
 #endif
 //JSTINNO_SRC lion.li, DATE20151226, NOTE, WIKO_UNIFY START
-#define WIKO_UNIFY_TYPE
-#ifdef WIKO_UNIFY_TYPE
+#ifdef CONFIG_WIKO_UNIFY
 #include <linux/of_device.h>
 #include <asm/uaccess.h>
 #endif
@@ -770,7 +769,7 @@ static void __init do_initcalls(void)
 		do_initcall_level(level);
 }
 //JSTINNO_SRC lion.li, DATE20151226, NOTE, WIKO_UNIFY START
-#ifdef WIKO_UNIFY_TYPE
+#ifdef CONFIG_WIKO_UNIFY
 //static struct proc_dir_entry *device_info_entry;
 //JSTINNO_SRC lion.li, WIKO_UNIFY END
 
@@ -906,7 +905,7 @@ static int __ref kernel_init(void *unused)
 	kernel_init_freeable();
     
 //JSTINNO_SRC lion.li, DATE20151226, NOTE, WIKO_UNIFY START
-#ifdef WIKO_UNIFY_TYPE
+#ifdef CONFIG_WIKO_UNIFY
      tinno_platform_adapter();
 #endif
 //JSTINNO_SRC lion.li, WIKO_UNIFY END
