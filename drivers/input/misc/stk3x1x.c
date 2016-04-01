@@ -5130,9 +5130,9 @@ static int stk3x1x_probe(struct i2c_client *client,
             goto err_stk3x1x_setup_irq;
     }
 #else
-       err = sensors_classdev_register(&client->dev, &ps_data->als_cdev);
-       if (err)
-               goto err_stk3x1x_setup_irq;
+	err = sensors_classdev_register(&client->dev, &ps_data->als_cdev);
+	if (err)
+		goto err_stk3x1x_setup_irq;
 #endif  /* CONFIG_WIKO_UNIFY */
 // LION.LI, BugFCCBM-768 wiko unify END
 
@@ -5148,9 +5148,9 @@ static int stk3x1x_probe(struct i2c_client *client,
                 goto err_class_sysfs;
         }
 #else /* CONFIG_WIKO_UNIFY */
-        err = sensors_classdev_register(&client->dev, &ps_data->als_cdev);
-        if (err)
-            goto err_stk3x1x_setup_irq;
+	err = sensors_classdev_register(&client->dev, &ps_data->ps_cdev);
+	if (err)
+		goto err_class_sysfs;
 
 #endif  /* CONFIG_WIKO_UNIFY */
 // LION.LI, BugFCCBM-768 wiko unify END
