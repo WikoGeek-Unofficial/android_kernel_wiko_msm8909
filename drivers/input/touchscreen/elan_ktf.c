@@ -431,7 +431,7 @@ ts->x_resolution=480;
     elan_info( "[elan] %s: x resolution: %d, y resolution: %d\n",__func__, ts->x_resolution, ts->y_resolution);
 #ifdef  CONFIG_TINNO_DEV_INFO
 #ifdef CONFIG_TINNO_V3901
-    sprintf(des_buf, "DIJING-EKTF2232-V3901-%x",ts->fw_ver);
+    sprintf(des_buf, "DIJING-V3901-EKTF2339-%x",ts->fw_ver);
 #else
     sprintf(des_buf, "HUARUIC-EKTF2232-L5221-%x",ts->fw_ver);
 #endif

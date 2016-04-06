@@ -461,6 +461,9 @@ void fts_get_upgrade_array(void)
 		printk("[Focal][Touch] read value fail");
 	}
 	printk("%s chip_id = %x\n", __func__, chip_id);
+#ifdef CONFIG_TINNO_V3901
+	chip_id = 0x64; // avoid read fail cause upgrade fail.
+#endif
 
 	for(i=0;i<sizeof(fts_updateinfo)/sizeof(struct fts_Upgrade_Info);i++)
 	{

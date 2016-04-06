@@ -1928,13 +1928,17 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 
 	dev_dbg(&client->dev, "touch threshold = %d\n", reg_value * 4);
 
+#ifdef FTS_AUTO_UPGRADE
+	printk("********************Enter CTP Auto Upgrade********************\n");
+	fts_ctpm_auto_upgrade(client);
+#endif
 	fts_update_fw_ver(data);
 	fts_update_fw_vendor_id(data);
 
 #ifdef CONFIG_TINNO_DEV_INFO
 	CAREAT_TINNO_DEV_INFO(TouchPanel);
 	CAREAT_TINNO_DEV_INFO(TouchPanel_Fw_Ver);
-	sprintf(des_buf, "FOCALTECH-FT6336-V3901-%d.%d.%d",
+	sprintf(des_buf, "YEJI-V3901-FT6336U-%d.%d.%d",
 		data->fw_ver[0], data->fw_ver[1], data->fw_ver[2]);
 	SET_DEVINFO_STR(TouchPanel, des_buf);
 	sprintf(des_buf, "%d.%d.%d", data->fw_ver[0], data->fw_ver[1], data->fw_ver[2]);
@@ -1971,11 +1975,6 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 		  	init_para(720,1280,0,0,0);
 		 }
 	#endif
-
-	#ifdef FTS_AUTO_UPGRADE
-	printk("********************Enter CTP Auto Upgrade********************\n");
-	fts_ctpm_auto_upgrade(client);
-	#endif 
 	
 #if defined(CONFIG_FB)
 	data->fb_notif.notifier_call = fb_notifier_callback;
