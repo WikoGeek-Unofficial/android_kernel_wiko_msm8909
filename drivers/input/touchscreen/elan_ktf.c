@@ -433,7 +433,7 @@ ts->x_resolution=480;
 #ifdef CONFIG_TINNO_V3901
     sprintf(des_buf, "DIJING-V3901-EKTF2339-%x",ts->fw_ver);
 #else
-    sprintf(des_buf, "HUARUIC-EKTF2232-L5221-%x",ts->fw_ver);
+    sprintf(des_buf, "HUARUIC-L5221AE-EKTF2339-%x",ts->fw_ver);
 #endif
     SET_DEVINFO_STR(TouchPanel,des_buf);
     sprintf(des_buf, "%x",ts->fw_ver);

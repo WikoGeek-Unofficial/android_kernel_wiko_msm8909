@@ -2622,9 +2622,9 @@ void update_fw_version(u16 ver)
 {
 	#ifdef CONFIG_TINNO_L5221 
 #ifdef CONFIG_L5221BP_PROJECT
-		sprintf(des_buf, "YEJI-GT950-L5221BP-%x-%d",ver,cfg_ver);
+		sprintf(des_buf, "YEJI-L5221BP-GT950-%x-%d",ver,cfg_ver);
 #else
-		sprintf(des_buf, "YEJI-GT950-L5221AE-%x-%d",ver,cfg_ver);
+		sprintf(des_buf, "YEJI-L5221AE-GT950-%x-%d",ver,cfg_ver);
 #endif
 	#else
 		#ifdef CONFIG_TINNO_L5251 
