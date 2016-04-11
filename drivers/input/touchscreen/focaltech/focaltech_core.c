@@ -1929,8 +1929,11 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	dev_dbg(&client->dev, "touch threshold = %d\n", reg_value * 4);
 
 #ifdef FTS_AUTO_UPGRADE
-	printk("********************Enter CTP Auto Upgrade********************\n");
-	fts_ctpm_auto_upgrade(client);
+	#define STRING_BOOT_FTM_MODE "androidboot.mode=ffbm-01"
+	if (!strstr(saved_command_line, STRING_BOOT_FTM_MODE)) {
+		printk("********************Enter CTP Auto Upgrade********************\n");
+		fts_ctpm_auto_upgrade(client);
+	}
 #endif
 	fts_update_fw_ver(data);
 	fts_update_fw_vendor_id(data);
