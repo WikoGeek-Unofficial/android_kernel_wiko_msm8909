@@ -59,7 +59,7 @@
 #define STK_POLL_PS
 #define STK_POLL_ALS		/* ALS interrupt is valid only when STK_INT_PS_MODE = 1	or 4*/
 #define STK_LUX_MAP
-#define STK_TUNE0
+//#define STK_TUNE0
 #define CALI_PS_EVERY_TIME
 #define STK_DEBUG_PRINTF
 //#define SPREADTRUM_PLATFORM
@@ -448,11 +448,12 @@ struct stk3x1x_data {
 	bool tune_zero_init_proc;
 	uint32_t ps_stat_data[3];
 	int data_count;
-	int stk_max_min_diff;
+
 	int ps_nf;
 	int stk_lt_n_ct;
 	int stk_ht_n_ct;
 #endif	
+
 #ifdef STK_ALS_FIR
 	struct data_filter      fir;
 	atomic_t                firlength;	
@@ -505,11 +506,12 @@ static int32_t stk3x1x_set_als_thd_h(struct stk3x1x_data *ps_data, uint16_t thd_
 static int32_t stk3x1x_get_ir_reading(struct stk3x1x_data *ps_data);
 #ifdef STK_TUNE0
 static int stk_ps_tune_zero_func_fae(struct stk3x1x_data *ps_data);
+static int stk_ps_val(struct stk3x1x_data *ps_data);
 #endif
 #ifdef STK_CHK_REG
 static int stk3x1x_validate_n_handle(struct i2c_client *client);
 #endif
-static int stk_ps_val(struct stk3x1x_data *ps_data);
+
 #ifdef STK_QUALCOMM_POWER_CTRL
 static int stk3x1x_device_ctl(struct stk3x1x_data *ps_data, bool enable);
 #endif
@@ -936,7 +938,7 @@ static int32_t stk3x1x_set_als_thd_l(struct stk3x1x_data *ps_data, uint16_t thd_
 	val[1] = thd_l & 0x00FF;
 	ret = stk3x1x_i2c_write_data(ps_data->client, STK_THDL1_ALS_REG, 2, val);
 	if(ret < 0)
-		printk(  "%s: fail, ret=%d\n", __func__, ret);	
+		printk(KERN_ERR "%s: fail, ret=%d\n", __func__, ret);	
 	return ret;		
 }
 static int32_t stk3x1x_set_als_thd_h(struct stk3x1x_data *ps_data, uint16_t thd_h)
@@ -947,7 +949,7 @@ static int32_t stk3x1x_set_als_thd_h(struct stk3x1x_data *ps_data, uint16_t thd_
 	val[1] = thd_h & 0x00FF;
 	ret = stk3x1x_i2c_write_data(ps_data->client, STK_THDH1_ALS_REG, 2, val);		
 	if(ret < 0)
-		printk(  "%s: fail, ret=%d\n", __func__, ret);	
+		printk(KERN_ERR "%s: fail, ret=%d\n", __func__, ret);	
 	return ret;	
 }
 
@@ -959,9 +961,10 @@ static int32_t stk3x1x_set_ps_thd_l(struct stk3x1x_data *ps_data, uint16_t thd_l
 	val[1] = thd_l & 0x00FF;
 	ret = stk3x1x_i2c_write_data(ps_data->client, STK_THDL1_PS_REG, 2, val);		
 	if(ret < 0)
-		printk(  "%s: fail, ret=%d\n", __func__, ret);	
+		printk(KERN_ERR "%s: fail, ret=%d\n", __func__, ret);	
 	return ret;	
 }
+
 static int32_t stk3x1x_set_ps_thd_h(struct stk3x1x_data *ps_data, uint16_t thd_h)
 {	
 	unsigned char val[2];
@@ -970,7 +973,7 @@ static int32_t stk3x1x_set_ps_thd_h(struct stk3x1x_data *ps_data, uint16_t thd_h
 	val[1] = thd_h & 0x00FF;
 	ret = stk3x1x_i2c_write_data(ps_data->client, STK_THDH1_PS_REG, 2, val);		
 	if(ret < 0)
-		printk(  "%s: fail, ret=%d\n", __func__, ret);	
+		printk(KERN_ERR "%s: fail, ret=%d\n", __func__, ret);	
 	return ret;
 }
 
@@ -1389,8 +1392,9 @@ static int32_t stk3x1x_enable_ps(struct stk3x1x_data *ps_data, uint8_t enable, u
 //add yaohua.li end
     if(enable)
 	{
-	ps_data->ps_nf = 1;
+	
 #ifdef STK_TUNE0
+       ps_data->ps_nf = 1;
 	#ifdef CALI_PS_EVERY_TIME
 		ps_data->psi_set = 0;
 		ps_data->psa = 0;
@@ -1880,6 +1884,7 @@ static void stk3x1x_ps_cali_set_threshold(void)
     ps_data->ps_thd_l = value_low;
 		
     printk("===LGC====stk3x1x_ps_cali_set_threshold:value_high ========5=======\n");
+    printk("stk3x1x_ps_cali_set_threshold:ps_thd_h=%x,ps_thd_l=%x! \n",ps_data->ps_thd_h,ps_data->ps_thd_l);
     stk3x1x_set_ps_thd_h(ps_data, ps_data->ps_thd_h);
     stk3x1x_set_ps_thd_l(ps_data, ps_data->ps_thd_l);
     printk("stk3x1x_ps_cali_set_threshold:value_high=%x,value_low=%x! \n",value_high,value_low);
@@ -3296,6 +3301,7 @@ static struct attribute_group stk_ps_attribute_group = {
 	.attrs = stk_ps_attrs,
 };
 
+#ifdef STK_TUNE0
 static int stk_ps_val(struct stk3x1x_data *ps_data)
 {
 	int mode;
@@ -3334,6 +3340,7 @@ static int stk_ps_val(struct stk3x1x_data *ps_data)
 	}
 	return 0;
 }	
+#endif
 
 #ifdef STK_TUNE0	
 
@@ -4127,9 +4134,9 @@ static void stk_ps_poll_work_func(struct work_struct *work)
 		if(ps_data->ps_distance_last != near_far_state)
 		{
 			ps_data->ps_distance_last = near_far_state;
-			
+#ifdef STK_TUNE0			
 			ps_data->ps_nf = near_far_state;
-			
+#endif			
 			input_report_abs(ps_data->ps_input_dev, ABS_DISTANCE, near_far_state);
 			input_event(ps_data->ps_input_dev, EV_SYN, SYN_TIME_SEC,
 				ktime_to_timespec(ts).tv_sec);
@@ -4141,12 +4148,13 @@ static void stk_ps_poll_work_func(struct work_struct *work)
 			printk( "%s: ps input event %d cm, ps code = %d\n",__func__, near_far_state, reading);		
 #endif		
 
-
+#ifdef STK_TUNE0
 			if((ps_data->boot_cali <= 20)&&(ps_data->boot_ct < STK_LT_DEF)&&(ps_data->psi_set == 0)&&(ps_data->ps_nf == 0)&&(ps_data->psi!= 0xFFFF))
 			{
 				ps_data->boot_cali = ps_data->boot_cali + 30;
 				ps_data->psi_set = ps_data->psi;
 			}
+#endif			
 
 		}
 		// ret = stk3x1x_set_flag(ps_data, org_flag_reg, disable_flag);		
@@ -5070,9 +5078,12 @@ static int stk3x1x_probe(struct i2c_client *client,
 	ps_data->ps_thd_h = 0;
 	ps_data->ps_thd_l = 0;	
 #endif	
+
+#ifdef STK_TUNE0
 	ps_data->stk_max_min_diff = STK_MAX_MIN_DIFF;
 	ps_data->stk_lt_n_ct = plat_data->ps_thd_l;
 	ps_data->stk_ht_n_ct = plat_data->ps_thd_h;
+#endif	
 
 #ifdef STK_QUALCOMM_POWER_CTRL	
 		
