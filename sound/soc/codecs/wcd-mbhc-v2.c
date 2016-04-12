@@ -69,6 +69,9 @@ extern struct switch_dev wcd_mbhc_headset_switch ;
 extern struct switch_dev wcd_mbhc_button_switch ;
 #endif
 //-- eadset sw IF
+//++ camera self-pole TN:peter
+bool self_pole = false;
+//-- camera self-pole
 
 static void wcd_mbhc_jack_report(struct wcd_mbhc *mbhc,
 				struct snd_soc_jack *jack, int status, int mask)
@@ -716,7 +719,27 @@ static void wcd_mbhc_find_plug_and_report(struct wcd_mbhc *mbhc,
 						SND_JACK_HEADPHONE);
 			if (mbhc->current_plug == MBHC_PLUG_TYPE_HEADSET)
 				wcd_mbhc_report_plug(mbhc, 0, SND_JACK_HEADSET);
-		wcd_mbhc_report_plug(mbhc, 1, SND_JACK_UNSUPPORTED);
+	//++ camera self-pole TN:peter
+	//	wcd_mbhc_report_plug(mbhc, 1, SND_JACK_UNSUPPORTED);
+		if (mbhc->impedance_detect) {
+				mbhc->mbhc_cb->compute_impedance(mbhc,
+						&mbhc->zl, &mbhc->zr);
+				if ((mbhc->zl > 20000) && (mbhc->zr > 20000)) {
+					pr_debug("%s: special accessory \n", __func__);
+					/* Toggle switch back */
+					if (mbhc->mbhc_cfg->swap_gnd_mic &&
+						mbhc->mbhc_cfg->swap_gnd_mic(mbhc->codec)) {
+						pr_debug("%s: US_EU gpio present,flip switch again\n"
+								, __func__);
+					}
+					wcd_mbhc_report_plug(mbhc, 1, SND_JACK_HEADSET);
+					self_pole = true;
+				}
+				else {
+					wcd_mbhc_report_plug(mbhc, 1, SND_JACK_UNSUPPORTED);
+				}
+			}
+	//-- camera self-pole
 	} else if (plug_type == MBHC_PLUG_TYPE_HEADSET) {
 		/*
 		 * If Headphone was reported previously, this will
@@ -949,7 +972,11 @@ static void wcd_enable_mbhc_supply(struct wcd_mbhc *mbhc,
 							WCD_MBHC_EN_CS);
 		} else if (plug_type == MBHC_PLUG_TYPE_HEADPHONE) {
 			wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_CS);
-		} else {
+		//++ camera self-pole TN:peter
+		} else if (self_pole == true){
+			wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_CS);
+		//-- camera self-pole 
+		}else{
 			wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_NONE);
 		}
 	}
