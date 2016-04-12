@@ -2064,6 +2064,26 @@ ERR_GET_VCC:
 	return ret;
 }
 
+static ssize_t elan_fw_upgrade_write(struct file *file, const char *buf, size_t size, loff_t *ppos)
+{
+	char tmp[16] = {0};
+	if (copy_from_user(tmp, buf, size)) {
+		return 0;
+	}
+
+	if (simple_strtol(tmp, NULL, 10) == 1) {
+		if(file_fw_data!=NULL) {
+			update_fw_one(private_ts->client);
+		}
+	}
+	return size;
+}
+
+static struct file_operations elan_fw_upgrade_ops = {
+	.owner		= THIS_MODULE,
+	.write		= elan_fw_upgrade_write,
+};
+
 static int elan_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
     int ret = 0;
@@ -2169,7 +2189,9 @@ static int elan_ts_probe(struct i2c_client *client, const struct i2c_device_id *
 
     elan_touch_node_init();
 #if defined IAP_PORTION
-	get_vendor_info(ts);
+    get_vendor_info(ts);
+    proc_create_data("tp_fw_upgrade", S_IRUGO, NULL, &elan_fw_upgrade_ops, NULL);
+
     if (file_fw_data != NULL){
 	//{ Modify by Zidong: Disable firmware update in ftm mode
 	#define STRING_BOOT_FTM_MODE "androidboot.mode=ffbm-01"
