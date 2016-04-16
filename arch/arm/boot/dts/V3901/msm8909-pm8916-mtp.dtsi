@@ -106,6 +106,9 @@
 &dsi_fl10802_fwvga_video {
 	qcom,mdss-dsi-pwm-gpio = <&pm8916_mpps 4 0>;
 };
+&dsi_hx8379c_fwvga_video {
+	qcom,mdss-dsi-pwm-gpio = <&pm8916_mpps 4 0>;
+};
 
 &dsi_ili9806e_fwvga_video {
 	qcom,mdss-dsi-pwm-gpio = <&pm8916_mpps 4 0>;
