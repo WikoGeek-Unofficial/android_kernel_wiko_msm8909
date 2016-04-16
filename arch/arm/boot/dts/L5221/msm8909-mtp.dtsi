@@ -491,7 +491,7 @@
 //yajun lcd
 #include "dsi-panel-otm8019a-fwvga-video.dtsi"
 #include "dsi-panel-ili9806e-fwvga-video.dtsi"
-
+#include "dsi-panel-hx8379c-fwvga-video.dtsi"
 &mdss_mdp {
 	qcom,mdss-pref-prim-intf = "dsi";
 };
@@ -512,6 +512,16 @@
 	qcom,mdss-dsi-pwm-gpio = <&pm8909_mpps 2 0>;
 	qcom,cont-splash-enabled;
 };*/
+
+&dsi_hx8379c_fwvga_video {
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_pwm";
+	qcom,mdss-dsi-bl-pmic-pwm-frequency = <100>;
+	qcom,mdss-dsi-bl-pmic-bank-select = <0>;
+	qcom,mdss-dsi-pwm-gpio = <&pm8909_mpps 2 0>;
+	qcom,cont-splash-enabled;
+	qcom,esd-check-enabled;
+};
+
 &dsi_otm8019a_fwvga_video {
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_pwm";
 	qcom,mdss-dsi-bl-pmic-pwm-frequency = <100>;
@@ -540,7 +550,7 @@
 };
 
 &mdss_dsi0 {
-	qcom,dsi-pref-prim-pan = <&dsi_ili9806e_fwvga_video>;
+	qcom,dsi-pref-prim-pan = <&dsi_hx8379c_fwvga_video>;
 	pinctrl-names = "mdss_default", "mdss_sleep";
 	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
 	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
