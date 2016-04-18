@@ -941,9 +941,9 @@ int32_t msm_sensor_driver_probe(void *setting,
 		if(strcmp(slave_info->sensor_name, "ov5648_sunwin") == 0)
 		sprintf(main_des_buf, "%s","ov5648_sunwin(5M|interp:null)");
 		else if(strcmp(slave_info->sensor_name, "ov5670_sunwin_v3901") == 0)
-		sprintf(main_des_buf, "%s","ov5670_sunwin_v3901(5M|interp:null)");
+		sprintf(main_des_buf, "%s","ov5670_sunwin(5M|interp:null)");
 		else if(strcmp(slave_info->sensor_name, "ov5670_cmk_v3901") == 0)
-		sprintf(main_des_buf, "%s","ov5670_cmk_v3901(5M|interp:null)");
+		sprintf(main_des_buf, "%s","ov5670_cmk(5M|interp:null)");
 		else
 		sprintf(main_des_buf, "%s",slave_info->sensor_name);
 		
@@ -958,9 +958,9 @@ int32_t msm_sensor_driver_probe(void *setting,
 		if(strcmp(slave_info->sensor_name, "ov5670_sunwin") == 0)
 		sprintf(sub_des_buf, "%s","ov5670_sunwin(5M|interp:null)");
 		else if(strcmp(slave_info->sensor_name, "sp2508_8909") == 0)
-		sprintf(sub_des_buf, "%s","sp2508_blx_v3901(2M|interp:null)");
+		sprintf(sub_des_buf, "%s","sp2508_blx(2M|interp:null)");
 		else if(strcmp(slave_info->sensor_name, "gc2355_8909") == 0)
-		sprintf(sub_des_buf, "%s","gc2355_cmk_v3901(2M|interp:null)");
+		sprintf(sub_des_buf, "%s","gc2355_cmk(2M|interp:null)");
 		else
 		sprintf(sub_des_buf, "%s",slave_info->sensor_name);
 
