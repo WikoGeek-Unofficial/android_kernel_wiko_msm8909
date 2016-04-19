@@ -450,7 +450,27 @@
 		stk,ps-thdl = <40>;
 		stk,use-fir;
 	};
-
+	liteon@23 {
+	compatible = "liteon,ltr553";
+	reg = <0x23>;
+	vdd-supply = <&pm8909_l17>;
+	vio-supply = <&pm8909_l6>;
+	interrupt-parent = <&msm_gpio>;
+	interrupts = <113 0x2002>;
+	pinctrl-names = "default","sleep";
+	pinctrl-0 = <&ltr553_default>;
+	pinctrl-1 = <&ltr553_sleep>;
+	liteon,irq-gpio = <&msm_gpio 113 0x2002>;
+	liteon,als-ps-persist = <0>;
+	liteon,ps-led = <0x7f>;
+	liteon,ps-pulses = <4>;
+	liteon,wakeup-threshold = <4>;
+	liteon,als-integration-time = <0>;
+	liteon,ps-distance-table = <1376 566 343 287 200 170 155>;
+	
+	tinno,threshold_low = <580>;
+	tinno,threshold_high = <600>;
+};
 	akm@c { /* Magnetic field sensor */
 		compatible = "ak,ak09911";
 		reg = <0x0c>;
