@@ -70,7 +70,10 @@
 		vdd-supply = <&pm8916_l17>;
 		vio-supply = <&pm8916_l6>;
 	};
-
+	liteon@23 {
+		vdd-supply = <&pm8916_l17>;
+		vio-supply = <&pm8916_l6>;
+	};
 	akm@c { 
 		vdd-supply = <&pm8916_l17>;
 		vio-supply = <&pm8916_l6>;
