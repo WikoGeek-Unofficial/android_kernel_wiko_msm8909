@@ -1,3 +1,13 @@
+RO_TARGET := $(strip $(subst ro.target =,,$(shell cat $(PWD)/../build.ini |grep ^ro.target)))
+ifeq ($(strip $(RO_TARGET)),V3901)
+RO_PROJECT := $(strip $(subst ro.project =,,$(shell cat $(PWD)/../build.ini |grep ^ro.project)))
+$(warning -wlj--PWD= $(PWD)-------RO_TARGET=$(RO_TARGET))
+ifeq ($(strip $(RO_PROJECT)),bq_ru)
+$(warning -wlj--PWD= $(PWD)-------RO_PROJECT=$(RO_PROJECT))
+ccflags-y += -DTINNO_MAIN_CAMERA_INTERPOLATION
+ccflags-y += -DTINNO_SUB_CAMERA_INTERPOLATION
+endif
+endif
 ccflags-y += -Idrivers/media/platform/msm/camera_v2
 ccflags-y += -Idrivers/media/platform/msm/camera_v2/msm_vb2
 ccflags-y += -Idrivers/media/platform/msm/camera_v2/camera

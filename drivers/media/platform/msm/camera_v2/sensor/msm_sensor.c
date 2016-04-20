@@ -1827,6 +1827,7 @@ int msm_sensor_i2c_probe(struct i2c_client *client,
     #ifdef CONFIG_TINNO_DEV_INFO
 	
 	 	printk("YC %s position %d %s\n", __func__,s_ctrl->sensordata->sensor_info->position,client->name);
+	    //Main camera info
 
 		if(s_ctrl->sensordata->sensor_info->position==0){
 		sprintf(main_des_buf, "%s",client->name);
@@ -1834,13 +1835,18 @@ int msm_sensor_i2c_probe(struct i2c_client *client,
 		SET_DEVINFO_STR(main_camera,main_des_buf);
 			camera_found_number++;
 		}
+		//Sub camera info
 		else if((s_ctrl->sensordata->sensor_info->position==1)||
 			(s_ctrl->sensordata->sensor_info->position==2)
 		){
 			if(strcmp(client->name, "hi258_8909") == 0)
 			sprintf(sub_des_buf, "%s","hi258(2M|interp:null)");
 			else if(strcmp(client->name, "gc0310") == 0)
+			#ifdef TINNO_SUB_CAMERA_INTERPOLATION
+			sprintf(sub_des_buf, "%s","gc0310(0.3M|interp:2M)");
+			#else
 			sprintf(sub_des_buf, "%s","gc0310(0.3M|interp:null)");
+			#endif
 			else
 			sprintf(sub_des_buf, "%s",client->name);	
 		CAREAT_TINNO_DEV_INFO(sub_camera);
