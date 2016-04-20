@@ -27,7 +27,20 @@
 			  bias-pull-down;
 		};
 	};
-
+	ltr553_int_pin {
+		qcom,pins = <&gp 94>;
+		qcom,pin-func = <0>;
+		qcom,num-grp-pins = <1>;
+		label = "ltr553-irq";
+		ltr553_default: ltr553_default {
+			drive-strength = <6>;
+			bias-pull-up;
+		};
+		ltr553_sleep: ltr553_sleep {
+			drive-strength = <2>;
+			bias-pull-down;
+		};
+	};
 	akm_reset_pin {
 		qcom,pins = <&gp 36>;
 		qcom,pin-func = <0>;
@@ -417,7 +430,8 @@
 };
 
 &i2c_1 { /* BLSP1 QUP1 */
-	bosch@18 { /* Accelerometer sensor */
+/* Accelerometer sensor */
+	bosch@18 { 
 		compatible = "bosch,bma2x2";
 		reg = <0x18>;
 		pinctrl-names = "bma_default","bma_sleep";
@@ -432,7 +446,28 @@
 		bosch,gpio-int1 = <&msm_gpio 96 0x2002>;
 	};
 
-	stk@48 { /* Ambient light and proximity sensor */
+	liteon@23 {
+	compatible = "liteon,ltr553";
+	reg = <0x23>;
+	vdd-supply = <&pm8909_l17>;
+	vio-supply = <&pm8909_l6>;
+	interrupt-parent = <&msm_gpio>;
+	interrupts = <94 0x2002>;
+	pinctrl-names = "default","sleep";
+	pinctrl-0 = <&ltr553_default>;
+	pinctrl-1 = <&ltr553_sleep>;
+	liteon,irq-gpio =  <&msm_gpio 94 0x2002>;
+	liteon,als-ps-persist = <0>;
+	liteon,ps-led = <0x7f>;
+	liteon,ps-pulses = <4>;
+	liteon,wakeup-threshold = <4>;
+	liteon,als-integration-time = <0>;
+	liteon,ps-distance-table = <1376 566 343 287 200 170 155>;
+	
+	tinno,threshold_low = <580>;
+	tinno,threshold_high = <600>;
+};/* Ambient light and proximity sensor */
+/*	stk@48 { 
 		compatible = "stk,stk3x1x";
 		reg = <0x48>;
 		interrupt-parent = <&msm_gpio>;
@@ -450,27 +485,7 @@
 		stk,ps-thdl = <40>;
 		stk,use-fir;
 	};
-	liteon@23 {
-	compatible = "liteon,ltr553";
-	reg = <0x23>;
-	vdd-supply = <&pm8909_l17>;
-	vio-supply = <&pm8909_l6>;
-	interrupt-parent = <&msm_gpio>;
-	interrupts = <113 0x2002>;
-	pinctrl-names = "default","sleep";
-	pinctrl-0 = <&ltr553_default>;
-	pinctrl-1 = <&ltr553_sleep>;
-	liteon,irq-gpio = <&msm_gpio 113 0x2002>;
-	liteon,als-ps-persist = <0>;
-	liteon,ps-led = <0x7f>;
-	liteon,ps-pulses = <4>;
-	liteon,wakeup-threshold = <4>;
-	liteon,als-integration-time = <0>;
-	liteon,ps-distance-table = <1376 566 343 287 200 170 155>;
-	
-	tinno,threshold_low = <580>;
-	tinno,threshold_high = <600>;
-};
+*/
 	akm@c { /* Magnetic field sensor */
 		compatible = "ak,ak09911";
 		reg = <0x0c>;
