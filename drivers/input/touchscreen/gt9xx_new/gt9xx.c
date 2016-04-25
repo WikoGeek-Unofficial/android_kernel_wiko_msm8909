@@ -148,7 +148,9 @@ int wake_up_irq_status=0;
 #define TINNO_KEY_LIGHT      603
 #endif
 #endif
-
+#if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903)
+static  int gtp_sensor_id=0;
+#endif
 
 
 
@@ -595,14 +597,20 @@ static void goodix_ts_work_func(struct work_struct *work)
     u8  point_data[2 + 1 + 8 * GTP_MAX_TOUCH + 1]={GTP_READ_COOR_ADDR >> 8, GTP_READ_COOR_ADDR & 0xFF};
     u8  touch_num = 0;
     u8  finger = 0;
-    static u16 pre_touch = 0;
+    static u16 pre_touch = 0;	
+	//zgm add
+#if GTP_HAVE_TOUCH_KEY	
     static u8 pre_key = 0;
     static u8 pre_key_value = 0;
+#endif
 #if GTP_WITH_PEN
     u8 pen_active = 0;
     static u8 pre_pen = 0;
 #endif
+//zgm add
+#if (GTP_HAVE_TOUCH_KEY || GTP_PEN_HAVE_BUTTON)
     u8  key_value = 0;
+#endif
     u8* coor_data = NULL;
     s32 input_x = 0;
     s32 input_y = 0;
@@ -1545,7 +1553,9 @@ static s32 gtp_init_panel(struct goodix_ts_data *ts)
         return -1;
     }
     GTP_INFO("Sensor_ID: %d", sensor_id);
-
+#if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903)
+	gtp_sensor_id = sensor_id;
+#endif
 	/* parse config data*/
 #ifdef GTP_CONFIG_OF	
 	GTP_DEBUG("Get config data from device tree.");
@@ -1825,8 +1835,12 @@ static s8 gtp_i2c_test(struct i2c_client *client)
     s8 ret = -1;
   
     GTP_DEBUG_FUNC();
-  
+    //zgm change 5 to 2
+#if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903)	
+    while(retry++ < 2)
+#else
     while(retry++ < 5)
+#endif
     {
         ret = gtp_i2c_read(client, test, 3);
         if (ret > 0)
@@ -2633,6 +2647,16 @@ void update_fw_version(u16 ver)
 				sprintf(des_buf, "YEJI-GT950-LXXXX-%x-%d",ver,cfg_ver);
 		#endif
 	#endif
+#if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903)
+	if (5 == gtp_sensor_id)
+    {
+		sprintf(des_buf, "TCL-GT615-P490x-%x-%d",ver,cfg_ver);
+	}
+    else
+	{
+		sprintf(des_buf, "DIJING-GT615-P490x-%x-%d",ver,cfg_ver);
+	}
+#endif	
 	SET_DEVINFO_STR(TouchPanel,des_buf);
 	sprintf(des_buf, "%x",ver);
 	SET_DEVINFO_STR(TouchPanel_Fw_Ver,des_buf);	
@@ -2859,6 +2883,12 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
     ret = gtp_i2c_test(client);
     if (ret < 0)
     {
+        //zgm add
+#if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903)		
+        GTP_GPIO_FREE(gtp_rst_gpio);
+        GTP_GPIO_FREE(gtp_int_gpio);
+#endif		
+		//zgm end
         GTP_ERROR("I2C communication ERROR!");
 	return -1;
     }
