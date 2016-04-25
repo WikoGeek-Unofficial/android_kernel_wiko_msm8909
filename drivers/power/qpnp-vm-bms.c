@@ -1678,7 +1678,8 @@ static int prepare_reported_soc(struct qpnp_bms_chip *chip)
 #define SOC_CATCHUP_SEC_MAX		600
 #define SOC_CATCHUP_SEC_PER_PERCENT	60
 #define MAX_CATCHUP_SOC	(SOC_CATCHUP_SEC_MAX / SOC_CATCHUP_SEC_PER_PERCENT)
-#define SOC_CHANGE_PER_SEC		5
+#define SOC_CHANGE_PER_SEC		60
+#define SOC_CHANGE_PER_SEC_FAST		30
 static int report_vm_bms_soc(struct qpnp_bms_chip *chip)
 {
 	int soc, soc_change, batt_temp, rc;
@@ -1753,8 +1754,14 @@ static int report_vm_bms_soc(struct qpnp_bms_chip *chip)
 		 */
 		if (bms_wake_active(&chip->vbms_lv_wake_source) ||
 			(batt_temp <= chip->dt.cfg_low_temp_threshold))
-			soc_change = min((int)abs(chip->last_soc - soc),
-				time_since_last_change_sec);
+			{
+			       soc_change = min((int)abs(chip->last_soc - soc),
+				time_since_last_change_sec/SOC_CHANGE_PER_SEC_FAST);
+				if(soc_change>1)
+				{
+				    soc_change=1;
+				}
+			}
 		else
 			soc_change = min((int)abs(chip->last_soc - soc),
 				time_since_last_change_sec
