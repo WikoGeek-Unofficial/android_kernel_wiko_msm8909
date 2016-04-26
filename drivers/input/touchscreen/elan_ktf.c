@@ -2147,21 +2147,6 @@ static int elan_ts_probe(struct i2c_client *client, const struct i2c_device_id *
     }
 */
 
-    ret = elan_ts_register_interrupt(ts);
-    if (ret < 0) {
-        elan_info("[elan error]: %s elan_ts_register_interrupt\n", __func__);
-        ret =  -EINVAL;
-        goto unreg_inputdev_l;
-    }
-
-    ts->work_thread = kthread_run(touch_event_handler, 0, ELAN_TS_NAME);
-    if(IS_ERR(ts->work_thread)) {
-        retval = PTR_ERR(ts->work_thread);
-        elan_info("[elan error] failed to create kernel thread: %ld\n", retval);
-        ret = -EINVAL;
-        goto unreg_inputdev;
-    }
-
 #if defined(CONFIG_FB)
     ts->fb_notif.notifier_call = fb_notifier_callback;
     ret = fb_register_client(&ts->fb_notif);
@@ -2209,6 +2194,21 @@ static int elan_ts_probe(struct i2c_client *client, const struct i2c_device_id *
         elan_info("[elan error]: %s elan_request_input_dev\n", __func__);
         ret =  -EINVAL;
         goto unreg_inputdev;
+    }
+
+    ts->work_thread = kthread_run(touch_event_handler, 0, ELAN_TS_NAME);
+    if(IS_ERR(ts->work_thread)) {
+        retval = PTR_ERR(ts->work_thread);
+        elan_info("[elan error] failed to create kernel thread: %ld\n", retval);
+        ret = -EINVAL;
+        goto unreg_inputdev;
+    }
+
+    ret = elan_ts_register_interrupt(ts);
+    if (ret < 0) {
+        elan_info("[elan error]: %s elan_ts_register_interrupt\n", __func__);
+        ret =  -EINVAL;
+        goto unreg_inputdev_l;
     }
 
     elan_info("[elan]+++++++++end porbe+++++++++!\n");
