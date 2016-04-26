@@ -53,9 +53,12 @@ int chg_boot_flag=0;
 #define TINNO_HIGH_VOLTAGE_BATTERY
 #endif
 
+#ifdef CONFIG_TINNO_GPIO_CTL_VBUS
+extern int otg_vbus_state;
+#endif
+
 #ifdef CONFIG_TINNO_L5251
 //#define TINNO_HIGH_VOLTAGE_BATTERY
-extern int otg_vbus_state;
 extern int battype;
 const char battery_type_str[2][50]={"Li-polymer Battery","Li-ion Battery"};
 #endif
@@ -729,7 +732,13 @@ static int qpnp_lbc_is_usb_chg_plugged_in(struct qpnp_lbc_chip *chip)
 {
 	u8 usbin_valid_rt_sts;
 	int rc;
-
+#ifdef CONFIG_TINNO_GPIO_CTL_VBUS
+		if(otg_vbus_state)
+		{
+			printk("report no charging!\n");
+			return 0;
+		}
+#endif
 	rc = qpnp_lbc_read(chip, chip->usb_chgpth_base + INT_RT_STS_REG,
 				&usbin_valid_rt_sts, 1);
 	if (rc) {
@@ -1925,20 +1934,22 @@ static int qpnp_batt_power_get_property(struct power_supply *psy,
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
 		val->intval = get_prop_batt_status(chip);
-		#ifdef CONFIG_TINNO_L5251
+		#ifdef CONFIG_TINNO_GPIO_CTL_VBUS
 		if(otg_vbus_state)
 		{
 			val->intval = POWER_SUPPLY_STATUS_DISCHARGING;
 		}
 		#endif
+		printk("status otg_vbus_state =%d\n",otg_vbus_state);
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
 		val->intval = get_prop_charge_type(chip);
-		#ifdef CONFIG_TINNO_L5251
+		#ifdef CONFIG_TINNO_GPIO_CTL_VBUS
 		if(otg_vbus_state)
 		{
 			val->intval = POWER_SUPPLY_CHARGE_TYPE_NONE;
 		}
+		printk("type otg_vbus_state =%d\n",otg_vbus_state);
 		#endif
 		break;
 	case POWER_SUPPLY_PROP_HEALTH:
