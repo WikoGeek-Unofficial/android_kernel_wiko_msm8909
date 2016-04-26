@@ -3188,7 +3188,7 @@ exit:
 }
 
 static const struct i2c_device_id ltr553_id[] = {
-	{ LTR553_I2C_NAME, 0 },
+	{ "ltr553", 0 },
 	{ }
 };
 
@@ -3208,7 +3208,7 @@ static struct i2c_driver ltr553_driver = {
 	.id_table = ltr553_id,
 	.driver = {
 		.owner = THIS_MODULE,
-		.name = LTR553_I2C_NAME,
+		.name = "ltr553",
 		.of_match_table = ltr553_match_table,
 		.pm = &ltr553_pm_ops,
 	},
