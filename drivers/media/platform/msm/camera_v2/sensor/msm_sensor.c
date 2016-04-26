@@ -546,13 +546,10 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 	pr_err("%s: read id: 0x%x expected id 0x%x:\n", __func__, chipid,
 		slave_info->sensor_id);
 
-	//	if(!strcmp(sensor_name,"ov5670_sunwin_v3901"))
-	//		{
-	//	  pr_err("v3901 ov5670 sunwin  	read id fail\n"); 
-	//	  return -ENODEV;
-	//	 }
-
-
+	#ifdef TINNO_TARGET_V3901
+	  if (!strcmp(sensor_name, "ov5648_sunwin") )
+		  rc=-1;
+	#endif
 
 		#if 1
 			if((chipid==0x5670)&&((!strcmp(sensor_name,"ov5670_sunwin_v3901"))||(!strcmp(sensor_name,"ov5670_cmk_v3901"))))

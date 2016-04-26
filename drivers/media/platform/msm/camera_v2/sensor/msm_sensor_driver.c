@@ -940,6 +940,8 @@ int32_t msm_sensor_driver_probe(void *setting,
 		
 		if(strcmp(slave_info->sensor_name, "ov5648_sunwin") == 0)
 		sprintf(main_des_buf, "%s","ov5648_sunwin(5M|interp:null)");
+		else if(strcmp(slave_info->sensor_name, "ov5648_sunwin_v3903") == 0)
+		sprintf(main_des_buf, "%s","ov5648_sunwin(5M|interp:null)");
 		else if(strcmp(slave_info->sensor_name, "ov5670_sunwin_v3901") == 0)
 		#ifdef TINNO_MAIN_CAMERA_INTERPOLATION
 		sprintf(main_des_buf, "%s","ov5670_sunwin(5M|interp:8M)");

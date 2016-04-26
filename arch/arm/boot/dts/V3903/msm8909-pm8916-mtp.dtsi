@@ -85,7 +85,13 @@
 };
 
 &i2c_3 {
+
 	qcom,eeprom@20{
+		cam_vdig-supply = <&pm8916_l2>;
+		cam_vio-supply = <&pm8916_l6>;
+	};
+
+	qcom,eeprom@6c{
 		cam_vdig-supply = <&pm8916_l2>;
 		cam_vio-supply = <&pm8916_l6>;
 	};
