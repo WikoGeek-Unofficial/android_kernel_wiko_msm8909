@@ -35,7 +35,30 @@
 #include <linux/uaccess.h>
 #include <linux/atomic.h>
 
-#define LTR553_I2C_NAME			"ltr553"
+#define LTR553_IOCTL_MAGIC      'c'
+
+/* IOCTLs for ltr553 device */
+#define LTR553_IOCTL_PS_ENABLE		_IOR(LTR553_IOCTL_MAGIC, 1, int *)
+#define LTR553_IOCTL_PS_GET_ENABLED	_IOW(LTR553_IOCTL_MAGIC, 2, int *)
+#define LTR553_IOCTL_ALS_ENABLE		_IOR(LTR553_IOCTL_MAGIC, 3, int *)
+#define LTR553_IOCTL_ALS_GET_ENABLED	_IOW(LTR553_IOCTL_MAGIC, 4, int *)
+
+
+//LINE<JIRA_ID><DATE20131218><add PS Calibration>zenghaihui
+#define ALSPS_IOCTL_PS_CALI_START			_IOW(LTR553_IOCTL_MAGIC, 0x05, int[2])
+#define ALSPS_IOCTL_PS_SET_CALI			_IOW(LTR553_IOCTL_MAGIC, 0x06, int[2])
+#define ALSPS_IOCTL_PS_GET_CALI			_IOW(LTR553_IOCTL_MAGIC, 0x07, int[2])
+#define ALSPS_IOCTL_PS_CLR_CALI			_IO(LTR553_IOCTL_MAGIC, 0x08)
+#define ALSPS_IOCTL_PS_CALI_RAW_DATA				_IOW(LTR553_IOCTL_MAGIC, 0x09, int)
+#define ALSPS_IOCTL_PS_DATA				_IOW(LTR553_IOCTL_MAGIC, 0x0A, int)
+
+//LINE<JIRA_ID><DATE20141211><show lux in ffbm>zenghaihui
+#define ALSPS_IOCTL_ALS_RAW_DATA				_IOW(LTR553_IOCTL_MAGIC, 0x0B, int)
+
+
+
+
+#define LTR553_I2C_NAME			"ps"//"ltr553"
 #define LTR553_LIGHT_INPUT_NAME		"ltr553-light"
 #define LTR553_PROXIMITY_INPUT_NAME	"ltr553-proximity"
 
@@ -169,6 +192,12 @@ struct ltr553_data {
 	unsigned int		reg_addr;
 	char			calibrate_buf[CAL_BUF_LEN];
 	unsigned int		bias;
+
+        //LINE<JIRA_ID><DATE20150413><BUG_INFO>zenghaihui
+    	uint16_t default_ps_lowthresh;
+	uint16_t default_ps_highthresh;
+	uint8_t als_opened;
+	uint8_t ps_opened;
 };
 
 struct als_coeff {
@@ -278,6 +307,41 @@ static struct sensors_classdev ps_cdev = {
 	.sensors_enable = NULL,
 	.sensors_poll_delay = NULL,
 };
+
+
+static struct ltr553_data *sensor_info;
+
+#define PS_MIN_MEASURE_VAL	0
+#define PS_MAX_MEASURE_VAL	2047
+#define PS_VALID_MEASURE_MASK   PS_MAX_MEASURE_VAL
+
+//LINE<JIRA_ID><DATE20131219><add PS Calibration>zenghaihui
+#define PROXIMITY_CALI_DEFAULT_DATA  (0x0A)
+#define PROXIMITY_CALI_DEFAULT_THRESHOLD_HIGH_OFFSET (0x60)
+#define PROXIMITY_CALI_DEFAULT_THRESHOLD_LOW_OFFSET (0x5A)
+#define PROXIMITY_CALI_DATA_PATH  "/persist/ps_cali_data"
+
+static int g_ps_cali_flag = 0;
+static int g_ps_base_value = 0;
+static int g_read_ps_cali_flag =0;
+
+//LINE<JIRA_ID><DATE20141127><add ps cali data in dts>zenghaihui
+static int g_ps_default_base_value = 0;
+static int g_ps_default_threshold_high_offset = 0;
+static int g_ps_default_threshold_low_offset =0;
+
+//LINE<JIRA_ID><DATE20141203><detect ffbm in ltr553>zenghaihui
+//static int g_ffbm_flag =0xffff;
+//static void ltr553_read_ffbm_flag(void);
+
+static void ltr553_write_ps_cali_data(int vl_flag, int vl_ps_data);
+static void ltr553_read_ps_cali_data(void);
+//static int ltr553_read_lcd_brightness(void);
+static uint16_t read_als_adc_raw_value(struct ltr553_data *ltr);
+static void ltr553_ps_cali_start(void);
+static void ltr553_ps_cali_set_threshold(void);
+static uint16_t read_ps_adc_value(struct ltr553_data *ltr);
+
 
 static int sensor_power_init(struct device *dev, struct regulator_map *map,
 		int size)
@@ -528,6 +592,38 @@ static int ltr553_parse_dt(struct device *dev, struct ltr553_data *ltr)
 	if (rc)
 		dev_warn(dev, "read liteon,als-equation-3 failed. Drop to default\n");
 
+
+
+        //LINE<JIRA_ID><DATE20141127><add ps cali data in dts>zenghaihui
+	rc = of_property_read_u32(dp, "tinno,base_value", &value);
+	if (rc) {
+		pr_info("Unable to read tinno,base_value\n");
+		g_ps_default_base_value = PROXIMITY_CALI_DEFAULT_DATA;
+	} else {
+		g_ps_default_base_value = value;
+		pr_info("read g_ps_default_base_value = %x \n", g_ps_default_base_value);
+	}
+    
+	rc = of_property_read_u32(dp, "tinno,threshold_high_offset", &value);
+	if (rc) {
+		pr_info("Unable to read tinno,threshold_high_offset\n");
+		g_ps_default_threshold_high_offset = PROXIMITY_CALI_DEFAULT_THRESHOLD_HIGH_OFFSET;
+	} else {
+		g_ps_default_threshold_high_offset = value;
+		pr_info("read g_ps_default_threshold_high_offset = %x \n", g_ps_default_threshold_high_offset);
+	}
+    
+	rc = of_property_read_u32(dp, "tinno,threshold_low_offset", &value);
+	if (rc) {
+		pr_info("Unable to read tinno,threshold_low_offset\n");
+		g_ps_default_threshold_low_offset = PROXIMITY_CALI_DEFAULT_THRESHOLD_LOW_OFFSET;
+	} else {
+		g_ps_default_threshold_low_offset = value;
+		pr_info("read g_ps_default_threshold_low_offset = %x \n", g_ps_default_threshold_low_offset);
+	}
+
+
+
 	return 0;
 }
 
@@ -548,6 +644,292 @@ static int ltr553_check_device(struct ltr553_data *ltr)
 
 	return 0;
 }
+
+
+//LINE<JIRA_ID><DATE20150413><BUG_INFO>zenghaihui
+
+
+/* PS open fops */
+static ssize_t ps_open(struct inode *inode, struct file *file)
+{
+	struct ltr553_data *ltr553 = sensor_info;
+
+	if (ltr553->ps_opened)
+		return -EBUSY;
+
+	ltr553->ps_opened = 1;
+
+	return 0;
+}
+
+
+/* PS release fops */
+static ssize_t ps_release(struct inode *inode, struct file *file)
+{
+	struct ltr553_data *ltr553 = sensor_info;
+
+	ltr553->ps_opened = 0;
+
+	return 0; // ps_disable(ltr553);
+}
+
+
+/* PS IOCTL */
+static long ps_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+	int rc = 0, val = 0;
+        //LINE<JIRA_ID><DATE20131219><add PS Calibration>zenghaihui        
+	void __user *ptr = (void __user*) arg;
+        int ps_cali_data[2] = {0x00};
+	struct ltr553_data *ltr553 = sensor_info;
+//LINE<JIRA_ID><DATE20141031><add ps calibration>zenghaihui
+	static int factory_status = 0;
+
+	pr_info("%s cmd %d\n", __func__, _IOC_NR(cmd));
+
+	switch (cmd) {
+	case LTR553_IOCTL_PS_ENABLE:
+			if (get_user(val, (unsigned long __user *)arg)) {
+				rc = -EFAULT;
+				break;
+			}
+
+//LINE<JIRA_ID><DATE20141031><add ps calibration>zenghaihui
+			//rc = val ? ps_enable_init(ltr553) : ps_disable(ltr553);
+			//ps_mode_setup((uint8_t)val, ltr553);
+
+			break;
+	case LTR553_IOCTL_PS_GET_ENABLED:
+			//rc = put_user(ltr553->ps_enable_flag,
+			//		(unsigned long __user *)arg);
+
+			break;
+
+    
+            //LINE<JIRA_ID><DATE20131218><add PS Calibration>zenghaihui
+            case ALSPS_IOCTL_PS_CALI_START:
+                pr_info("case ALSPS_IOCTL_PS_CALI_START: \n");
+                
+                ltr553_ps_cali_start();
+                
+                if (ptr == NULL) {
+                    pr_info("%s ptr == NULL", __FUNCTION__);
+                    rc = -EINVAL;
+                    break;
+                }
+                
+                ps_cali_data[0] = g_ps_cali_flag;
+                ps_cali_data[1] = g_ps_base_value;
+                
+                pr_info("g_ps_cali_flag = %x, g_ps_base_value = %x \n", g_ps_cali_flag, g_ps_base_value);
+
+                ltr553_ps_cali_set_threshold();
+                ltr553_write_ps_cali_data(g_ps_cali_flag, g_ps_base_value);
+
+                if (copy_to_user(ptr, ps_cali_data, sizeof(ps_cali_data))) {
+                    pr_info("%s copy_from_user error", __FUNCTION__);
+                    rc = -EFAULT;
+                    break;
+                }
+                break;
+
+            case ALSPS_IOCTL_PS_SET_CALI:
+                pr_info("case ALSPS_IOCTL_PS_SET_CALI: \n");
+                
+                if (ptr == NULL) {
+                    pr_info("%s ptr == NULL", __FUNCTION__);
+                    rc = -EINVAL;
+                    break;
+                }
+                
+                if (copy_from_user(&ps_cali_data, ptr, sizeof(ps_cali_data))) {
+                    pr_info("%s copy_from_user error", __FUNCTION__);
+                    rc = -EFAULT;
+                    break;
+                }
+
+                g_ps_cali_flag = ps_cali_data[0];
+                g_ps_base_value = ps_cali_data[1];
+
+                if(!g_ps_cali_flag)
+                {
+                    g_ps_base_value = g_ps_default_base_value; // set default base value
+                    pr_info("not calibration!!! set g_ps_base_value = %x \n", g_ps_default_base_value);
+                }
+                
+                pr_info("g_ps_cali_flag = %x, g_ps_base_value = %x \n", g_ps_cali_flag, g_ps_base_value);
+
+                ltr553_ps_cali_set_threshold();
+                
+                break;
+
+            case ALSPS_IOCTL_PS_GET_CALI:
+                pr_info("case ALSPS_IOCTL_PS_GET_CALI: \n");
+                
+                if (ptr == NULL) {
+                    pr_info("%s ptr == NULL", __FUNCTION__);
+                    rc = -EINVAL;
+                    break;
+                }
+                
+                ps_cali_data[0] = g_ps_cali_flag;
+                ps_cali_data[1] = g_ps_base_value;
+                
+                pr_info("g_ps_cali_flag = %x, g_ps_base_value = %x \n", g_ps_cali_flag, g_ps_base_value);
+                
+                if (copy_to_user(ptr, ps_cali_data, sizeof(ps_cali_data))) {
+                    pr_info("%s copy_to_user error", __FUNCTION__);
+                    rc = -EFAULT;
+                    break;
+                }
+                break;
+
+            case ALSPS_IOCTL_PS_CLR_CALI:
+                pr_info("case ALSPS_IOCTL_PS_CLR_CALI: \n");
+                g_ps_cali_flag = 0;
+                g_ps_base_value = 0;
+                ltr553_ps_cali_set_threshold();
+                break;
+                
+            case ALSPS_IOCTL_PS_CALI_RAW_DATA:    
+                val = read_ps_adc_value(ltr553);
+                            
+                if(copy_to_user(ptr, &val, sizeof(val)))
+                {
+                    rc = -EFAULT;
+                    //goto err_out;
+                }  
+                break;        
+                
+            case ALSPS_IOCTL_PS_DATA:  
+
+                val = read_ps_adc_value(ltr553);
+
+                if(val > ltr553->default_ps_highthresh)
+                {
+                    //dat = 0;  /*close*/
+                    factory_status = 0;
+                }
+                else if(val < ltr553->default_ps_lowthresh)
+                {
+                    //dat = 1;  /*far*/
+                    factory_status = 1;
+                }
+
+                 val = factory_status;
+                    
+                if(copy_to_user(ptr, &val, sizeof(val)))
+                {
+                    rc = -EFAULT;
+                    //goto err_out;
+                }  
+                break;        
+
+	default:
+			pr_err("%s: INVALID COMMAND %d\n",
+				__func__, _IOC_NR(cmd));
+			rc = -EINVAL;
+	}
+
+	return rc;
+}
+
+static const struct file_operations ps_fops = {
+	.owner = THIS_MODULE,
+	.open = ps_open,
+	.release = ps_release,
+	.unlocked_ioctl = ps_ioctl
+};
+
+static struct miscdevice ps_misc = {
+	.minor = MISC_DYNAMIC_MINOR,
+	.name = "ps",
+	.fops = &ps_fops
+};
+
+static ssize_t als_open(struct inode *inode, struct file *file)
+{
+	struct ltr553_data *ltr553 = sensor_info;
+	int8_t rc = 0;
+
+	if (ltr553->als_opened) {
+		dev_err(&ltr553->i2c->dev,
+			"%s: ALS already Opened...\n", __func__);
+		rc = -EBUSY;
+	}
+	ltr553->als_opened = 1;
+
+	return rc;
+}
+
+
+static ssize_t als_release(struct inode *inode, struct file *file)
+{
+	struct ltr553_data *ltr553 = sensor_info;
+
+	ltr553->als_opened = 0;
+
+	return 0; // als_disable(ltr553);
+}
+
+static long als_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+	int rc = 0, val = 0;
+	struct ltr553_data *ltr553 = sensor_info;
+        //LINE<JIRA_ID><DATE20141211><show lux in ffbm>zenghaihui                
+	void __user *ptr = (void __user*) arg;
+
+	pr_debug("%s cmd %d\n", __func__, _IOC_NR(cmd));
+
+	switch (cmd) {
+	case LTR553_IOCTL_ALS_ENABLE:
+			if (get_user(val, (unsigned long __user *)arg)) {
+				rc = -EFAULT;
+				break;
+			}
+			/*pr_info("%s value = %d\n", __func__, val);*/
+		//rc = val ? als_enable_init(ltr553) : als_disable(ltr553);
+
+				break;
+	case LTR553_IOCTL_ALS_GET_ENABLED:
+			//val = ltr553->als_enable_flag;
+			/*pr_info("%s enabled %d\n", __func__, val);*/
+			//rc = put_user(val, (unsigned long __user *)arg);
+
+				break;
+
+        //LINE<JIRA_ID><DATE20141211><show lux in ffbm>zenghaihui                
+	case ALSPS_IOCTL_ALS_RAW_DATA:
+                val = read_als_adc_raw_value(ltr553);
+                if(copy_to_user(ptr, &val, sizeof(val)))
+                {
+                    rc = -EFAULT;
+                    //goto err_out;
+                }  
+                break;        
+                
+	default:
+			pr_err("%s: INVALID COMMAND %d\n",
+				__func__, _IOC_NR(cmd));
+			rc = -EINVAL;
+	}
+
+	return rc;
+}
+
+
+static const struct file_operations als_fops = {
+	.owner = THIS_MODULE,
+	.open = als_open,
+	.release = als_release,
+	.unlocked_ioctl = als_ioctl
+};
+
+static struct miscdevice als_misc = {
+	.minor = MISC_DYNAMIC_MINOR,
+	.name = "ltr553_ls",
+	.fops = &als_fops
+};
 
 static int ltr553_init_input(struct ltr553_data *ltr)
 {
@@ -596,6 +978,14 @@ static int ltr553_init_input(struct ltr553_data *ltr)
 	}
 
 	ltr->input_proximity = input;
+
+
+//LINE<JIRA_ID><DATE20150413><BUG_INFO>zenghaihui
+	misc_register(&ps_misc);
+
+
+	misc_register(&als_misc);
+
 
 	return 0;
 }
@@ -681,6 +1071,472 @@ static int ltr553_init_device(struct ltr553_data *ltr)
 	return 0;
 }
 
+
+//LINE<JIRA_ID><DATE20150413><BUG_INFO>zenghaihui
+/* Set PS range */
+static int8_t set_ps_range(uint16_t lt, uint16_t ht, uint8_t lo_hi,
+					struct ltr553_data *ltr)
+{
+	int rc;
+	uint8_t buffer[5], num_data = 0;
+
+	
+	//buffer[0] = LTR553_REG_PS_THRES_UP_0;
+	buffer[0] = ht & 0xFF;
+	buffer[1] = (ht >> 8) & 0x07;
+	buffer[2] = lt & 0xFF;
+	buffer[3] = (lt >> 8) & 0x07;
+	num_data = 4;
+
+	//ret = I2C_Write(buffer, num_data);
+
+	rc = regmap_bulk_write(ltr->regmap, LTR553_REG_PS_THRES_UP_0,
+		buffer, num_data);
+
+	if (rc ) {
+		pr_alert("set_ps_range  failed");
+
+		return rc;
+	}
+	dev_dbg(&ltr->i2c->dev,
+	"%s Set ps range:0x%04x - 0x%04x\n", __func__, lt, ht);
+
+	return rc;
+}
+
+
+
+//LINE<JIRA_ID><DATE20141203><detect ffbm in ltr553>zenghaihui
+#if 0
+static void ltr553_read_ffbm_flag(void)
+{
+	int ret = 0;
+	int vl_error_flag = 0;
+        mm_segment_t fs;   
+        char cmdline[512] = {0x00};
+        char *pffbm = NULL;
+
+        struct file *ps_filp = NULL;
+
+        pr_info("%s \n", __func__);
+        
+        fs=get_fs();   
+
+        set_fs(KERNEL_DS);  
+            
+        ps_filp = filp_open("/proc/cmdline", O_RDONLY, 0);
+
+        if (IS_ERR(ps_filp))
+        {
+            pr_info("%s    failed to open  %s\n", __func__, "/proc/cmdline");
+
+            vl_error_flag = 1;
+        }
+        else
+        {
+            ps_filp->f_op->llseek(ps_filp, 0, SEEK_SET);
+            
+            ret = ps_filp->f_op->read(ps_filp, (char*)cmdline, 511, &ps_filp->f_pos);
+            
+            if (ret < 0)
+            {
+                pr_info("failed to read cmdline");
+
+                vl_error_flag = 1;
+            }
+        }
+        
+        if(vl_error_flag)
+        {
+            // do nothing
+        }
+        else
+        {
+            cmdline[511] = 0x00;
+            
+            pr_info("%s: cmdline = %s \n", __func__, cmdline);
+            
+            pffbm = strstr(cmdline, "androidboot.mode=ffbm-01");
+
+            if(pffbm)
+            {
+                g_ffbm_flag = 1; // boot ffbm mode
+            }
+            
+        }
+        
+        pr_info("%s: g_ffbm_flag = %d \n", __func__, g_ffbm_flag);
+
+        if (ps_filp && !IS_ERR(ps_filp))
+        {
+            filp_close(ps_filp, NULL);
+        }
+        
+        set_fs(fs);  
+    
+}
+#endif
+
+//LINE<JIRA_ID><DATE20141031><add ps calibration>zenghaihui
+static void ltr553_write_ps_cali_data(int vl_flag, int vl_ps_data)
+{
+        mm_segment_t fs;   
+        int ps_data[2] = {0x00};
+        char str_ps_data[16] = {0x00};
+
+        struct file *ps_filp = NULL;
+
+        pr_info("%s: vl_flag = %d,  vl_ps_data = %d \n", __func__, vl_flag, vl_ps_data);
+
+        ps_data[0] = vl_flag;
+        ps_data[1] = vl_ps_data;
+        
+	snprintf(str_ps_data, sizeof(str_ps_data), "%d-%d-\n", vl_flag, vl_ps_data);
+
+
+        fs=get_fs();   
+
+        set_fs(KERNEL_DS);  
+            
+        ps_filp = filp_open(PROXIMITY_CALI_DATA_PATH, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+
+        if (IS_ERR(ps_filp))
+        {
+            pr_info("%s    failed to open  %s\n", __func__, PROXIMITY_CALI_DATA_PATH);
+        }
+        else
+        {
+
+            ps_filp->f_op->llseek(ps_filp, 0, SEEK_SET);
+            ps_filp->f_op->write(ps_filp, (char*)str_ps_data, strlen(str_ps_data), &ps_filp->f_pos);
+            
+        }
+
+        if (ps_filp && !IS_ERR(ps_filp))
+        {
+            filp_close(ps_filp, NULL);
+        }
+        
+        set_fs(fs);  
+
+}
+
+
+static void ltr553_read_ps_cali_data(void)
+{
+	int ret = 0;
+	int vl_error_flag = 0;
+        mm_segment_t fs;   
+        int ps_data[2] = {0x00};
+        char str_ps_data[16] = {0x00};
+
+        struct file *ps_filp = NULL;
+
+        pr_info("%s \n", __func__);
+        
+        fs=get_fs();   
+
+        set_fs(KERNEL_DS);  
+            
+        ps_filp = filp_open(PROXIMITY_CALI_DATA_PATH, O_RDONLY, 0);
+
+        if (IS_ERR(ps_filp))
+        {
+            pr_info("%s    failed to open  %s\n", __func__, PROXIMITY_CALI_DATA_PATH);
+
+            vl_error_flag = 1;
+        }
+        else
+        {
+
+            ps_filp->f_op->llseek(ps_filp, 0, SEEK_SET);
+            
+            ret = ps_filp->f_op->read(ps_filp, (char*)str_ps_data, sizeof(str_ps_data), &ps_filp->f_pos);
+
+            
+            if (ret < 0)
+            {
+                pr_info("failed to read ps data from file");
+
+                vl_error_flag = 1;
+            }
+            else
+            {
+                sscanf(str_ps_data, "%d-%d-", &ps_data[0], &ps_data[1]);
+            }
+        }
+        
+        if(vl_error_flag)
+        {
+            g_ps_cali_flag = 0;
+        }
+        else
+        {
+            pr_info("%s: ps_data[0] = %x, ps_data[1] = %x \n", __func__, ps_data[0], ps_data[1]);
+            
+            g_ps_cali_flag = ps_data[0];
+            g_ps_base_value= ps_data[1];
+        }
+        
+        if(!g_ps_cali_flag)
+        {
+            g_ps_base_value = g_ps_default_base_value; // set default base value
+            
+            pr_info("not calibration!!! set g_ps_base_value = %x \n", g_ps_default_base_value);
+        }
+        
+        pr_info("%s: g_ps_cali_flag = %x, g_ps_base_value = %x \n", __func__, g_ps_cali_flag, g_ps_base_value);
+
+        if (ps_filp && !IS_ERR(ps_filp))
+        {
+            filp_close(ps_filp, NULL);
+        }
+        
+        set_fs(fs);  
+    
+}
+
+
+static uint16_t read_ps_adc_value(struct ltr553_data *ltr)
+{
+        int rc = 0;
+	u8 ps_data[4];
+    
+	uint16_t value = -99;
+	uint16_t ps_val;
+
+
+	rc = regmap_bulk_read(ltr->regmap, LTR553_REG_PS_DATA_0,
+			ps_data, 2);
+
+	if (rc) {
+		dev_err(&ltr->i2c->dev, "read %d failed.(%d)\n",
+				LTR553_REG_PS_DATA_0, rc);
+		return 0;
+	}
+
+	ps_val = ((uint16_t)ps_data[1] << 8) | (uint16_t)ps_data[0];
+    
+
+	if (ps_val > PS_MAX_MEASURE_VAL) {
+		dev_err(&ltr->i2c->dev,
+			"%s: PS Value Error: 0x%X\n", __func__,
+					ps_val);
+	}
+	ps_val &= PS_VALID_MEASURE_MASK;
+
+	value = ps_val;
+
+        pr_info("read_ps_adc_value: value = %x \n", value);
+        
+	return value;
+}
+
+
+
+//LINE<JIRA_ID><DATE20141031><add ps calibration>zenghaihui
+static void ltr553_ps_cali_start(void)
+{
+    u16 			vl_read_ps = 0;
+    u16 			vl_ps_count = 0;
+    u16 			vl_ps_sun = 0;
+    u16 			vl_index = 0;
+	
+    struct ltr553_data *ltr553 = sensor_info;
+    
+    
+
+    pr_info("entry ltr553_ps_cali_start \n");
+    
+    if(NULL == ltr553->i2c)
+    {
+        pr_info("ltr501_obj->client == NULL\n"); 
+        return;
+    }
+
+
+    //if (ltr553->ps_enable_flag == 0)
+    //{
+    //    ps_mode_setup(1, ltr553);
+    //}
+    
+    msleep(10);
+
+    // read ps
+    for(vl_index = 0; vl_index < 5; vl_index++)
+    {
+	vl_read_ps = read_ps_adc_value(ltr553);
+
+        pr_info("vl_index=%d, vl_read_ps = %d \n",vl_index, vl_read_ps);
+
+        //if(vl_index >=2)
+        {
+            vl_ps_sun += vl_read_ps;
+            
+            vl_ps_count ++;
+        }
+        
+        vl_read_ps = 0;
+        
+        msleep(30);
+    }
+
+    g_ps_base_value = (vl_ps_sun/vl_ps_count);
+    g_ps_cali_flag = 1;
+    
+    pr_info("ltr553_ps_cali_start:g_ps_base_value=%x \n",g_ps_base_value);
+    
+    
+}
+
+
+static void ltr553_ps_cali_set_threshold(void)
+{
+	//u8 data, data2, data3;
+	u16 value_high,value_low;
+	struct ltr553_data *ltr553 = sensor_info;
+
+    //LINE<JIRA_ID><DATE20141127><add ps cali data in dts>zenghaihui
+    value_high= g_ps_base_value + g_ps_default_threshold_high_offset;
+    value_low= g_ps_base_value + g_ps_default_threshold_low_offset;
+
+    if( value_high > PS_MAX_MEASURE_VAL)
+    {
+        value_high= PS_MAX_MEASURE_VAL -100;
+        value_low= PS_MAX_MEASURE_VAL -90;
+        pr_info("ltr553_ps_cali_set_threshold: set value_high=0x7f0,value_low=0x7e0, please check the phone \n");
+    }
+
+    ltr553->default_ps_highthresh = value_high;
+    ltr553->default_ps_lowthresh = value_low;
+
+    set_ps_range(ltr553->default_ps_highthresh,
+    	ltr553->default_ps_lowthresh, 0, ltr553);
+
+	pr_info("ltr553_ps_cali_set_threshold:value_high=%x,value_low=%x! \n",value_high,value_low);
+}
+
+
+
+//LINE<FFBAKK-119><DATE20141008><als lux map>zenghaihui
+static uint16_t g_lux_sensor_map[8] = 
+{ 5,  110,  3000, 4500,  8000, 65535,  65535,  65535};
+static uint16_t g_lux_to_sys_map[8] = 
+{ 0,  50,  1000,  2000,  4000,  6000,  10000,  20000};
+
+#define SENSOR_MAP_LENGTH  (sizeof(g_lux_sensor_map) / sizeof(g_lux_sensor_map[0]))
+
+
+static int ltr553_calc_lux_ext(int ch0data, int ch1data, int gain, int als_int_fac)
+{
+
+    	uint16_t value = -99;
+
+        int ratio;
+        int ch0_val = ch0data;
+	int ch1_val = ch1data;
+
+	int8_t vl_index = 0;
+	uint16_t luxval_temp = 0;
+
+
+        if((ch0_val + ch1_val) == 0){
+            ratio = 1000;
+        } else{
+            ratio = (ch1_val*1000)/(ch0_val + ch1_val);
+        }
+
+        if(ratio < 450){
+            value =( (17743 * ch0_val) + (11059 * ch1_val))/10000;
+        } else if((ratio >= 450) && (ratio < 640)){
+            value = ((42785 * ch0_val) - (19548 * ch1_val))/10000;            
+        }else if((ratio >= 640) && (ratio < 900)){
+            value = ((5926 * ch0_val) + (1185 * ch1_val))/10000;  
+        }else{
+            value = 0;
+        }
+
+        if( value > 65530){
+            value = 65535;
+        }    
+
+
+    
+        luxval_temp = value;
+        
+        for(vl_index = 0; vl_index < SENSOR_MAP_LENGTH; vl_index++)
+        {
+            if(luxval_temp > g_lux_sensor_map[vl_index])
+                continue;
+
+            break;
+        }
+
+        if(vl_index >= SENSOR_MAP_LENGTH)
+            vl_index = SENSOR_MAP_LENGTH-1;
+		
+		
+	//pr_info("zenghh ltr553_calc_lux_ext:value= %d | vl_index=%d | g_lux_to_sys_map[vl_index] = %d \n", value,vl_index, g_lux_to_sys_map[vl_index]);
+		
+	return g_lux_to_sys_map[vl_index];
+
+}
+
+
+
+static uint16_t read_als_adc_raw_value(struct ltr553_data *ltr)
+{
+        int rc = 0;
+	u8 als_data[4];
+
+    	uint16_t value = -99;
+
+        int ratio;
+        int ch0_val;
+	int ch1_val;
+
+
+	/* ALS */
+	rc = regmap_bulk_read(ltr->regmap, LTR553_REG_ALS_DATA_CH1_0,
+			als_data, 4);
+	if (rc) {
+		dev_err(&ltr->i2c->dev, "read %d failed.(%d)\n",
+				LTR553_REG_ALS_DATA_CH1_0, rc);
+		return 0;
+	}
+    
+	ch0_val = als_data[2] | (als_data[3] << 8);
+	ch1_val = als_data[0] | (als_data[1] << 8);
+
+
+        if((ch0_val + ch1_val) == 0){
+            ratio = 1000;
+        } else{
+            ratio = (ch1_val*1000)/(ch0_val + ch1_val);
+        }
+
+        if(ratio < 450){
+            value =( (17743 * ch0_val) + (11059 * ch1_val))/10000;
+        } else if((ratio >= 450) && (ratio < 640)){
+            value = ((42785 * ch0_val) - (19548 * ch1_val))/10000;            
+        }else if((ratio >= 640) && (ratio < 900)){
+            value = ((5926 * ch0_val) + (1185 * ch1_val))/10000;  
+        }else{
+            value = 0;
+        }
+
+        if( value > 65530){
+            value = 65535;
+        }    
+
+	return value;
+
+}
+
+
+
+//LINE<JIRA_ID><DATE20150413><BUG_INFO>zenghaihui
+#if 0
 /* Calculate the lux value based on ADC data */
 static int ltr553_calc_lux(int ch0data, int ch1data, int gain, int als_int_fac)
 {
@@ -713,6 +1569,7 @@ static int ltr553_calc_lux(int ch0data, int ch1data, int gain, int als_int_fac)
 
 	return lux;
 }
+#endif
 
 /* Calculate adc value based on lux. Return value is positive */
 static int ltr553_calc_adc(int ratio, int lux, int gain, int als_int_fac)
@@ -880,7 +1737,7 @@ static int ltr553_process_data(struct ltr553_data *ltr, int als_ps)
 	int ch1data;
 
 	u8 ps_data[4];
-	int i;
+	//int i;
 	int distance;
 
 	timestamp = ktime_get_boottime();
@@ -906,7 +1763,8 @@ static int ltr553_process_data(struct ltr553_data *ltr, int als_ps)
 
 		tmp = (tmp & LTR553_ALS_MEASURE_MASK) >> 3;
 		als_int_fac = als_int_fac_table[tmp];
-		lux = ltr553_calc_lux(ch0data, ch1data,
+//LINE<JIRA_ID><DATE20150413><BUG_INFO>zenghaihui
+		lux = ltr553_calc_lux_ext(ch0data, ch1data,
 				als_gain_table[ltr->als_gain], als_int_fac);
 
 		dev_dbg(&ltr->i2c->dev, "lux:%d als_data:0x%x-0x%x-0x%x-0x%x\n",
@@ -961,6 +1819,9 @@ static int ltr553_process_data(struct ltr553_data *ltr, int als_ps)
 				ps_data[0], ps_data[1]);
 
 		tmp = (ps_data[1] << 8) | ps_data[0];
+
+        //LINE<JIRA_ID><DATE20150413><BUG_INFO>zenghaihui
+        #if 0
 		if (tmp & LTR553_PS_SATURATE_MASK)
 			distance = 0;
 		else {
@@ -972,6 +1833,21 @@ static int ltr553_process_data(struct ltr553_data *ltr, int als_ps)
 			}
 			distance = i;
 		}
+        #else
+    	pr_info("zenghh ltr553_process_data tmp = %x, default_ps_highthresh = %x, default_ps_lowthresh = %x \n", 
+    	tmp, ltr->default_ps_highthresh, ltr->default_ps_lowthresh);
+            if (tmp > ltr->default_ps_highthresh){
+    	pr_info("zenghh ltr553_process_data  near \n");
+                distance = 0;
+            }
+            else if (tmp < ltr->default_ps_lowthresh){
+    	pr_info("zenghh ltr553_process_data  far \n");
+                distance = 7;
+            }
+            else{
+                distance = ltr->last_ps;
+            }
+        #endif
 
 		if (distance != ltr->last_ps) {
 			input_report_abs(ltr->input_proximity, ABS_DISTANCE,
@@ -987,6 +1863,8 @@ static int ltr553_process_data(struct ltr553_data *ltr, int als_ps)
 
 		ltr->last_ps = distance;
 
+    //LINE<JIRA_ID><DATE20150413><BUG_INFO>zenghaihui
+    #if 0
 		/* lower threshold */
 		if (distance < ARRAY_SIZE(ps_distance_table))
 			tmp = ps_distance_table[distance];
@@ -1015,6 +1893,32 @@ static int ltr553_process_data(struct ltr553_data *ltr, int als_ps)
 					LTR553_REG_PS_THRES_UP_0, rc);
 			goto exit;
 		}
+    #else
+            if (distance == 0)
+            {
+		//ps_data[0] = 0xff;
+		//ps_data[1] = 0x07
+            
+		//ps_data[2] = ltr->default_ps_lowthresh & 0xff;;
+		//ps_data[3] = (ltr->default_ps_lowthresh>>8) & 0xff;
+
+                set_ps_range(ltr->default_ps_lowthresh, 0x7ff, 0, ltr);
+            }
+            else if(distance == 7)
+            {
+		//ps_data[0] = ltr->default_ps_highthresh&0xff;;
+		//ps_data[1] = (ltr->default_ps_highthresh>>8)&0xff;
+            
+		//ps_data[2] = 0x00;
+		//ps_data[3] = 0x00;
+        
+                set_ps_range(0x00, ltr->default_ps_highthresh, 0, ltr);
+            }
+            else
+            {
+                set_ps_range(ltr->default_ps_lowthresh, ltr->default_ps_highthresh, 0, ltr);
+            }
+    #endif
 	}
 exit:
 	return rc;
@@ -1424,6 +2328,16 @@ static void ltr553_ps_enable_work(struct work_struct *work)
 		ltr553_ps_sync_delay(ltr, ltr->ps_delay);
 	}
 
+        //LINE<JIRA_ID><DATE20150413><BUG_INFO>zenghaihui
+        if(g_read_ps_cali_flag == 0)
+        {
+            ltr553_read_ps_cali_data();
+            g_read_ps_cali_flag = 1;
+        }
+        
+        ltr553_ps_cali_set_threshold();
+        
+        
 	if (ltr553_enable_ps(ltr, 1)) {
 		dev_err(&ltr->i2c->dev, "enable ps failed\n");
 		goto exit_power_off;
@@ -1877,6 +2791,10 @@ static int ltr553_probe(struct i2c_client *client,
 
 	ltr->i2c = client;
 
+        //LINE<JIRA_ID><DATE20150413><BUG_INFO>zenghaihui
+	/* Global pointer for this device */
+	sensor_info = ltr;
+
 	if (client->dev.of_node) {
 		res = ltr553_parse_dt(&client->dev, ltr);
 		if (res) {
@@ -2078,9 +2996,9 @@ static int ltr553_suspend(struct device *dev)
 {
 	int res = 0;
 	struct ltr553_data *ltr = dev_get_drvdata(dev);
-	u8 ps_data[4];
+	//u8 ps_data[4];
 	unsigned int config;
-	int idx = ltr->ps_wakeup_threshold;
+	//int idx = ltr->ps_wakeup_threshold;
 
 	dev_dbg(dev, "suspending ltr553...");
 
@@ -2116,6 +3034,7 @@ static int ltr553_suspend(struct device *dev)
 		}
 
 		/* Setup threshold to avoid frequent wakeup */
+        #if 0
 		if (device_may_wakeup(&ltr->i2c->dev) &&
 				(idx != LTR553_WAKEUP_ANY_CHANGE)) {
 			dev_dbg(&ltr->i2c->dev, "last ps: %d\n", ltr->last_ps);
@@ -2142,6 +3061,38 @@ static int ltr553_suspend(struct device *dev)
 				goto exit;
 			}
 		}
+        #else
+		if (device_may_wakeup(&ltr->i2c->dev)) {
+            
+                	pr_info("zenghh ltr553_suspend  ltr->last_ps = %d \n", ltr->last_ps);
+
+                    if (ltr->last_ps == 0)
+                    {
+        		//ps_data[0] = 0xff;
+        		//ps_data[1] = 0x07
+                    
+        		//ps_data[2] = ltr->default_ps_lowthresh & 0xff;;
+        		//ps_data[3] = (ltr->default_ps_lowthresh>>8) & 0xff;
+
+                        set_ps_range(ltr->default_ps_lowthresh, 0x7ff, 0, ltr);
+                    }
+                    else if(ltr->last_ps == 7)
+                    {
+        		//ps_data[0] = ltr->default_ps_highthresh&0xff;;
+        		//ps_data[1] = (ltr->default_ps_highthresh>>8)&0xff;
+                    
+        		//ps_data[2] = 0x00;
+        		//ps_data[3] = 0x00;
+                
+                        set_ps_range(0x00, ltr->default_ps_highthresh, 0, ltr);
+                    }
+                    else
+                    {
+                        set_ps_range(ltr->default_ps_lowthresh, ltr->default_ps_highthresh, 0, ltr);
+                    }
+            
+		}
+        #endif
 	} else {
 		/* power off */
 		if (ltr->als_enabled)
@@ -2267,3 +3218,4 @@ module_i2c_driver(ltr553_driver);
 
 MODULE_DESCRIPTION("LTR-553ALPS Driver");
 MODULE_LICENSE("GPL v2");
+
