@@ -5003,7 +5003,7 @@ static const struct file_operations ps_fops = {
 
 static struct miscdevice ps_misc = {
 	.minor = MISC_DYNAMIC_MINOR,
-	.name = "stk_ps",
+	.name = "ps",
 	.fops = &ps_fops
 };
 ///////////////////////////// yaohua.li end
@@ -5302,7 +5302,7 @@ static int stk3x1x_remove(struct i2c_client *client)
 
 static const struct i2c_device_id stk_ps_id[] =
 {
-    { "stk_ps", 0},
+    { "ps", 0},
     {}
 };
 MODULE_DEVICE_TABLE(i2c, stk_ps_id);
