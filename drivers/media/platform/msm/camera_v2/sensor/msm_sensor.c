@@ -507,8 +507,9 @@ int msm_sensor_power_up(struct msm_sensor_ctrl_t *s_ctrl)
 
 int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 {
-	int rc = 0;
+	int rc = 0, addr_mid;
 	uint16_t chipid = 0;
+	uint16_t otp_flag = 0;
 	struct msm_camera_i2c_client *sensor_i2c_client;
 	struct msm_camera_slave_info *slave_info;
 	const char *sensor_name;
@@ -673,6 +674,92 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 				
 		}
 		#endif
+
+
+	//mingji add begin
+	pr_err("%s: sensor_name is %s:\n", __func__, sensor_name);
+	if ((chipid == 0x5670) &&
+		((!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_cmk", sizeof("ov5670_cmk"))) ||
+		(!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_sunwin", sizeof("ov5670_sunwin"))) ||
+		(!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_sunwin_p4901", sizeof("ov5670_sunwin_p4901"))) ||
+		(!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_sunwin_p4903", sizeof("ov5670_sunwin_p4903")))))
+	{
+		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
+			sensor_i2c_client, 0x0100,
+			0x01, MSM_CAMERA_I2C_BYTE_DATA);
+		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
+			sensor_i2c_client, 0x5002,
+			0x20, MSM_CAMERA_I2C_BYTE_DATA);
+		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
+			sensor_i2c_client, 0x7010,
+			0x00, MSM_CAMERA_I2C_BYTE_DATA);
+		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
+			sensor_i2c_client, 0x3d84,
+			0xc0, MSM_CAMERA_I2C_BYTE_DATA);
+		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
+			sensor_i2c_client, 0x3d88,
+			0x70, MSM_CAMERA_I2C_BYTE_DATA);
+		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
+			sensor_i2c_client, 0x3d89,
+			0x10, MSM_CAMERA_I2C_BYTE_DATA);
+		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
+			sensor_i2c_client, 0x3d8a,
+			0x70, MSM_CAMERA_I2C_BYTE_DATA);
+		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
+			sensor_i2c_client, 0x3d8b,
+			0x29, MSM_CAMERA_I2C_BYTE_DATA);
+		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
+			sensor_i2c_client, 0x3d81,
+			0x01, MSM_CAMERA_I2C_BYTE_DATA);
+		msleep(5);
+		rc = sensor_i2c_client->i2c_func_tbl->i2c_read(
+			sensor_i2c_client, 0x7010,
+			&otp_flag, MSM_CAMERA_I2C_BYTE_DATA);
+		pr_err("%s: otp_flag is %d:\n", __func__, otp_flag);
+
+		if ((otp_flag & 0xc0)== 0x40)
+		{
+			addr_mid = 0x7011; //base address of info group 1
+		}
+		else if ((otp_flag & 0x30)== 0x10)
+		{
+			addr_mid = 0x7016; //base address of info group 2
+		}
+		else if ((otp_flag & 0x0c) == 0x04)
+		{
+			addr_mid = 0x701b; //base address of info group 3
+		}
+		else
+		{
+			return -ENODEV;
+		}
+		pr_err("%s: addr_mid is 0x%x:\n", __func__, addr_mid);
+		rc = sensor_i2c_client->i2c_func_tbl->i2c_read(
+			sensor_i2c_client, addr_mid,
+			&mid, MSM_CAMERA_I2C_BYTE_DATA);
+		pr_err("%s: mid is %d:\n", __func__, mid);
+		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
+			sensor_i2c_client, 0x5002,
+			0x28, MSM_CAMERA_I2C_BYTE_DATA);
+
+		if((!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_cmk", sizeof("ov5670_cmk"))))
+		{
+			if(mid == 8)
+				pr_err("ov5670_cmk Success match =%d\n",mid);
+			else
+				return -ENODEV;
+		}
+		else if((!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_sunwin", sizeof("ov5670_sunwin"))) ||
+			(!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_sunwin_p4901", sizeof("ov5670_sunwin_p4901"))) ||
+			(!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_sunwin_p4903", sizeof("ov5670_sunwin_p4903"))))
+		{
+			if(mid == 6)
+				pr_err("ov5670_sunwin Success match =%d\n",mid);
+			else
+				return -ENODEV;
+		}
+	}
+	//mingji add end
 
 	
 	if (chipid != slave_info->sensor_id) {
