@@ -479,6 +479,7 @@
 #include "dsi-panel-ili9806e-fwvga-video.dtsi"
 #include "dsi-panel-hx8379c-fwvga-video.dtsi"
 #include "dsi-panel-ili9806e-fwvga-dj-video.dtsi"
+#include "dsi-panel-ili9806e-fwvga-txd-video.dtsi"
 &mdss_mdp {
 	qcom,mdss-pref-prim-intf = "dsi";
 };
@@ -528,6 +529,15 @@
 };
 
 &dsi_ili9806e_fwvga_dj_video {
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_pwm";
+	qcom,mdss-dsi-bl-pmic-pwm-frequency = <100>;
+	qcom,mdss-dsi-bl-pmic-bank-select = <0>;
+	qcom,mdss-dsi-pwm-gpio = <&pm8909_mpps 2 0>;
+	qcom,cont-splash-enabled;
+	qcom,esd-check-enabled;
+};
+
+&dsi_ili9806e_fwvga_txd_video {
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_pwm";
 	qcom,mdss-dsi-bl-pmic-pwm-frequency = <100>;
 	qcom,mdss-dsi-bl-pmic-bank-select = <0>;
