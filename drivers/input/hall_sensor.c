@@ -26,7 +26,7 @@
 #include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 
-#define	LID_DEV_NAME	"hall_sensor"
+#define	LID_DEV_NAME	"hall"
 #define HALL_INPUT	"/dev/input/hall_dev"
 static int hall_state=1;
 static s32 hall_state_rev = 1; 
@@ -231,6 +231,18 @@ static struct attribute_group hall_attribute_group = {
 };
 
 
+static ssize_t hall_state_show(struct device_driver *driver, char *buf)
+{
+	return snprintf(buf, PAGE_SIZE, "%d\n", hall_state);
+}
+
+static DRIVER_ATTR(hall_state, S_IRUGO, hall_state_show, NULL);
+
+static int hall_create_driver_attrs(struct device_driver *driver)
+{
+	return driver_create_file(driver, &driver_attr_hall_state);
+}
+
 static void hall_pollkey(unsigned long data)
 {
 	
@@ -397,7 +409,16 @@ static int __init hall_init(void)
     }
 #endif  /* CONFIG_WIKO_UNIFY */
     // LION.LI, BugFCCBM-768 wiko unify END
-	return platform_driver_register(&hall_driver);
+    int err = platform_driver_register(&hall_driver);
+    if (err){
+        printk("platform_driver_register hall_driver failed\n");
+        goto register_err;
+    }
+    err = hall_create_driver_attrs(&hall_driver.driver);
+    if (err)
+        printk("hall_create_driver_attrs failed\n");
+    register_err:
+        return err;
 }
 
 static void __exit hall_exit(void)
