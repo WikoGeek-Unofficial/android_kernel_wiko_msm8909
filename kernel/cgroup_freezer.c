@@ -475,6 +475,16 @@ static struct cftype files[] = {
 	{ }	/* terminate */
 };
 
+//JSTINNO_SRC xiaoyan.yu, add, DATE20160420-01 START
+static int freezer_cgroup_allow_attach(struct cgroup *cgroup,
+				   struct cgroup_taskset *tset)
+{
+	printk("freezer_cgroup_allow_attach LINE :%d \n",__LINE__);
+
+	return 0;
+}
+//JSTINNO_SRC xiaoyan.yu, DATE20160420-01 END
+
 struct cgroup_subsys freezer_subsys = {
 	.name		= "freezer",
 	.css_alloc	= freezer_css_alloc,
@@ -483,6 +493,9 @@ struct cgroup_subsys freezer_subsys = {
 	.css_free	= freezer_css_free,
 	.subsys_id	= freezer_subsys_id,
 	.attach		= freezer_attach,
+	//JSTINNO_SRC xiaoyan.yu, add, DATE20160420-01 START
+	.allow_attach = freezer_cgroup_allow_attach,
+	//JSTINNO_SRC xiaoyan.yu, DATE20160420-01 END
 	.fork		= freezer_fork,
 	.base_cftypes	= files,
 };
