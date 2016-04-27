@@ -952,6 +952,10 @@ int32_t msm_sensor_driver_probe(void *setting,
 		#else
 		sprintf(main_des_buf, "%s","ov5670_cmk(5M|interp:null)");
 		#endif
+		else if(strcmp(slave_info->sensor_name, "imx219") == 0)
+		    sprintf(main_des_buf, "imx219mipiraw_sunny");
+		else if(strcmp(slave_info->sensor_name, "hi842") == 0)
+		    sprintf(main_des_buf, "hi842mipiraw_sunwin");
 		else
 		sprintf(main_des_buf, "%s",slave_info->sensor_name);
 		
@@ -970,6 +974,10 @@ int32_t msm_sensor_driver_probe(void *setting,
 		sprintf(sub_des_buf, "%s","sp2508_blx(2M|interp:null)");
 		else if(strcmp(slave_info->sensor_name, "gc2355_8909") == 0)
 		sprintf(sub_des_buf, "%s","gc2355_cmk(2M|interp:null)");
+        else if(strcmp(slave_info->sensor_name, "ov5670_cmk") == 0)
+		sprintf(sub_des_buf, "ov5670mipiraw_cmk");
+        else if((strcmp(slave_info->sensor_name, "ov5670_sunwin_p4903") == 0) ||(strcmp(slave_info->sensor_name, "ov5670_sunwin_p4901") == 0))
+		sprintf(sub_des_buf, "ov5670mipiraw_sunwin");
 		else
 		sprintf(sub_des_buf, "%s",slave_info->sensor_name);
 

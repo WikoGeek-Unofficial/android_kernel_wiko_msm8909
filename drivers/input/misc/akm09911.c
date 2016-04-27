@@ -35,7 +35,11 @@
 #include <linux/regulator/consumer.h>
 #include <linux/of_gpio.h>
 #include <linux/sensors.h>
-
+#ifdef CONFIG_TINNO_DEV_INFO
+#include <linux/proc_fs.h>
+#include <asm/uaccess.h>
+DEF_TINNO_DEV_INFO(MSensor)
+#endif
 #define AKM_DEBUG_IF			0
 #define AKM_HAS_RESET			1
 #define AKM_INPUT_DEVICE_NAME	"compass"
@@ -2291,6 +2295,10 @@ int akm_compass_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	akm_compass_power_set(s_akm, false);
 
 	dev_info(&client->dev, "successfully probed.");
+#ifdef CONFIG_TINNO_DEV_INFO
+       CAREAT_TINNO_DEV_INFO(MSensor);
+       SET_DEVINFO_STR(MSensor,"AKM09911");
+#endif
 	return 0;
 
 exit8:

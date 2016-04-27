@@ -51,7 +51,11 @@
 #endif
 
 #include "bstclass.h"
-
+#ifdef CONFIG_TINNO_DEV_INFO
+#include <linux/proc_fs.h>
+#include <asm/uaccess.h>
+DEF_TINNO_DEV_INFO(GSensor)
+#endif
 #define ACC_NAME  "ACC"
 #define BMA2X2_ENABLE_INT1
 
@@ -8011,6 +8015,10 @@ static int bma2x2_probe(struct i2c_client *client,
 
 	bma2x2_pinctrl_state(data, false);
 	bma2x2_power_ctl(data, false);
+#ifdef CONFIG_TINNO_DEV_INFO
+       CAREAT_TINNO_DEV_INFO(GSensor);
+       SET_DEVINFO_STR(GSensor,"BMA223");
+#endif
 	return 0;
 
 remove_bst_acc_sysfs_exit:
