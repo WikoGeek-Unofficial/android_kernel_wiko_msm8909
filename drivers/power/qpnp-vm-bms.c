@@ -203,6 +203,10 @@ struct bms_wakeup_source {
 	unsigned long		disabled;
 };
 
+#ifdef CONFIG_TINNO_NOSLEEP_CHARGING	
+struct bms_wakeup_source	vbms_charging_wake_source;
+#endif
+
 struct temp_curr_comp_map {
 	int temp_decideg;
 	int current_ma;
@@ -1678,13 +1682,52 @@ static int prepare_reported_soc(struct qpnp_bms_chip *chip)
 #define SOC_CATCHUP_SEC_MAX		600
 #define SOC_CATCHUP_SEC_PER_PERCENT	60
 #define MAX_CATCHUP_SOC	(SOC_CATCHUP_SEC_MAX / SOC_CATCHUP_SEC_PER_PERCENT)
+#ifdef CONFIG_TINNO_DSIABLE_BATTERY_SOC_JUMP
+#define SOC_CHANGE_PER_SEC		60
+#else
 #define SOC_CHANGE_PER_SEC		5
+#endif
+
+#ifdef CONFIG_TINNO_DSIABLE_BATTERY_SOC_JUMP	
+#define MAX_SOC_DETAL    15
+
+#define MID_SOC_DETAL     5
+
+#define MIN_SOC_DETAL     3
+
+#define SOC_LOW_LIMIT     5
+#define MIN_TIME_DETAL    15
+#define MID_TIME_DETAL    30
+#define MAX_TIME_DETAL    60
+static int get_soc_change_detal_time(int source_soc,int target_soc)
+{
+	int soc_detal=abs(source_soc-target_soc);
+	if(soc_detal>MAX_SOC_DETAL)
+	{
+		return MIN_TIME_DETAL;
+	}else if(soc_detal>MID_SOC_DETAL)
+	{
+		return MID_TIME_DETAL;
+	}else{
+		if((target_soc==0)&&(soc_detal>MIN_SOC_DETAL))
+		{
+		    return MID_TIME_DETAL;
+		}else{
+		   return MAX_TIME_DETAL;
+		}
+	}
+}
+#endif
 static int report_vm_bms_soc(struct qpnp_bms_chip *chip)
 {
 	int soc, soc_change, batt_temp, rc;
 	int time_since_last_change_sec = 0, charge_time_sec = 0;
 	unsigned long last_change_sec;
 	bool charging;
+#ifdef CONFIG_TINNO_DSIABLE_BATTERY_SOC_JUMP	
+	static int soc_change_time_count=0;
+       int allow_change_time_detal=0;
+#endif
 #ifdef TINNO_SW_SOC_CALCUTE
 		int true_soc=0;
               int vm_ocv=0;
@@ -1696,7 +1739,15 @@ static int report_vm_bms_soc(struct qpnp_bms_chip *chip)
 
 	charging = is_battery_charging(chip);
 
-	
+#ifdef CONFIG_TINNO_DSIABLE_BATTERY_SOC_JUMP	
+	if(time_since_last_change_sec>SOC_CHANGE_PER_SEC)
+	{
+		time_since_last_change_sec=SOC_CHANGE_PER_SEC;
+	}
+	soc_change_time_count+=time_since_last_change_sec;
+	printk("soc_change_time_count=%d time_since_last_change_sec=%d \n",soc_change_time_count,time_since_last_change_sec);
+#endif	
+
 	if (chip->last_soc != soc && !chip->last_soc_unbound)
 		chip->last_soc_change_sec = last_change_sec;
 	
@@ -1751,14 +1802,27 @@ static int report_vm_bms_soc(struct qpnp_bms_chip *chip)
 		 * if the battery is close to cutoff or if the batt_temp
 		 * is under the low-temp threshold allow bigger change
 		 */
+#ifdef CONFIG_TINNO_DSIABLE_BATTERY_SOC_JUMP
+		allow_change_time_detal=get_soc_change_detal_time(chip->last_soc,soc);
+		printk("soc_change_time_count=%d allow_change_time_detal=%d \n",soc_change_time_count,allow_change_time_detal);
+		if(soc_change_time_count>=allow_change_time_detal)
+		{
+			soc_change=1;
+			soc_change_time_count=0; //modify by alik
+		}else {
+				 soc_change=0;
+		}
+#else
 		if (bms_wake_active(&chip->vbms_lv_wake_source) ||
 			(batt_temp <= chip->dt.cfg_low_temp_threshold))
 			       soc_change = min((int)abs(chip->last_soc - soc),
 				time_since_last_change_sec);
-		else
+		else{
 			soc_change = min((int)abs(chip->last_soc - soc),
 				time_since_last_change_sec
 					/ SOC_CHANGE_PER_SEC);
+			}
+#endif		
 
 		if (chip->last_soc_unbound) {
 			chip->last_soc_unbound = false;
@@ -2353,6 +2417,7 @@ static int qpnp_vm_bms_power_get_property(struct power_supply *psy,
 	switch (psp) {
 	case POWER_SUPPLY_PROP_CAPACITY:
 		val->intval = get_prop_bms_capacity(chip);
+		printk("bms show soc=%d val->intval \n",val->intval);
 		break;
 	case POWER_SUPPLY_PROP_STATUS:
 		val->intval = chip->battery_status;
@@ -4157,6 +4222,10 @@ start=strstr(saved_command_line,BAT_VOL_STR);
 	wakeup_source_init(&chip->vbms_lv_wake_source.source, "vbms_lv_wake");
 	wakeup_source_init(&chip->vbms_cv_wake_source.source, "vbms_cv_wake");
 	wakeup_source_init(&chip->vbms_soc_wake_source.source, "vbms_soc_wake");
+#ifdef CONFIG_TINNO_NOSLEEP_CHARGING	
+	wakeup_source_init(&vbms_charging_wake_source.source, "vbms_charging_wake");
+#endif
+	
 	INIT_DELAYED_WORK(&chip->monitor_soc_work, monitor_soc_work);
 	INIT_DELAYED_WORK(&chip->voltage_soc_timeout_work,
 					voltage_soc_timeout_work);
@@ -4413,6 +4482,27 @@ static void process_resume_data(struct qpnp_bms_chip *chip)
 	chip->suspend_data_valid = false;
 	mutex_unlock(&chip->bms_data_mutex);
 }
+
+#ifdef CONFIG_TINNO_NOSLEEP_CHARGING	
+void charging_wake_lock(int charging_state)
+{
+if (bms_wake_active(&vbms_charging_wake_source))
+  {
+  	if(!charging_state)
+  	{
+		bms_relax(&vbms_charging_wake_source);
+		tinno_pr_debug("not charging!,allow to suspend!\n");
+  	}
+  }else{
+  	if(charging_state)
+  	{
+	   bms_stay_awake(&vbms_charging_wake_source);
+	   tinno_pr_debug("in charging!,not  suspend!\n");
+  	}
+  }
+}
+#endif
+
 
 static int bms_suspend(struct device *dev)
 {

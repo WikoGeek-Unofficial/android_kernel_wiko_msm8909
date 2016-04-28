@@ -43,7 +43,7 @@ int battype=LI_POLYMER_BATTERY;
 // ============================================================ //
 
 
-//#define TINNO_DEBUG
+#define TINNO_DEBUG
 #if defined(TINNO_DEBUG)
 #ifndef pr_fmt
 #define pr_fmt(fmt) fmt
@@ -76,7 +76,7 @@ static int bat_init_soc=0;
 #ifdef CONFIG_TINNO_L5251 
 static int bat_totals_columb_st=0;
 static int gFG_columb_standard= 2500; //标称电量
-#else
+#else 
 static int bat_totals_columb_st=0;
 static int gFG_columb_standard= 2000; //标称电量
 #endif
@@ -103,8 +103,14 @@ int fgauge_get_Q_max_match_Current_and_temp(int t_current,int temp)
 			break;
 		v=v-10;
 	}
-    Q_max= fgauge_read_Q_cost_by_v_by_temp(v,temp);
-
+	
+     Q_max= fgauge_read_Q_cost_by_v_by_temp(v,temp);
+	
+     if(Q_max>gFG_columb_standard)
+     {
+     	 Q_max=gFG_columb_standard;
+     }
+	
     tinno_pr_debug("fgauge_get_Q_max_match_Current_and_temp : current=%d ,v=%d Q_max=%d , bat_r =%d \n",t_current,v,Q_max,bat_r);	
     return Q_max;
 }
