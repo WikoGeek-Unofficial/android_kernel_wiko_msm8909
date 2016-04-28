@@ -728,6 +728,11 @@ static int tinno_qpnp_lbc_is_usb_chg_plugged_in(struct qpnp_lbc_chip *chip)
 
 
 #endif
+
+#ifdef CONFIG_TINNO_NOSLEEP_CHARGING
+void charging_wake_lock(int charging_state);
+#endif
+
 static int qpnp_lbc_is_usb_chg_plugged_in(struct qpnp_lbc_chip *chip)
 {
 	u8 usbin_valid_rt_sts;
@@ -776,6 +781,12 @@ tinno_pr_debug("TINNO_CHG_DET 3\n");
 		       machine_power_off();
 		}
 	}
+
+#ifdef CONFIG_TINNO_NOSLEEP_CHARGING
+	rc=(usbin_valid_rt_sts & USB_IN_VALID_MASK) ? 1 : 0;
+	charging_wake_lock(rc);
+#endif	
+	
 	return (usbin_valid_rt_sts & USB_IN_VALID_MASK) ? 1 : 0;
 }
 

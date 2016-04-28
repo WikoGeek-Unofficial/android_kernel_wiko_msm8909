@@ -428,6 +428,12 @@ config BATTERY_BQ28400
 config USE_GPIO_RED_LED
 	bool "use gpio ctl red led!"
 
+config TINNO_NOSLEEP_CHARGING
+       bool "Not Sleep In Charging Status!"
+
+config TINNO_DSIABLE_BATTERY_SOC_JUMP
+       bool "NOT ALLOW BATTERY SOC JUMP!"
+
 config TINNO_HIGH_VOLTAGE_BATTERY
 	bool "battery full voltage is 4.35v!"
 
