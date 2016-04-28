@@ -402,6 +402,7 @@ core_param(Hall, Hall, int, 0444);
 static int __init hall_init(void)
 {
     // LION.LI, DATE20160401, NOTE, BugFCCBM-768 wiko unify START
+    int err = 0;
 #ifdef CONFIG_WIKO_UNIFY
     if (!Hall)
     {
@@ -409,7 +410,7 @@ static int __init hall_init(void)
     }
 #endif  /* CONFIG_WIKO_UNIFY */
     // LION.LI, BugFCCBM-768 wiko unify END
-    int err = platform_driver_register(&hall_driver);
+    err = platform_driver_register(&hall_driver);
     if (err){
         printk("platform_driver_register hall_driver failed\n");
         goto register_err;
