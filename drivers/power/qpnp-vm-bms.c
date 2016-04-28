@@ -1745,6 +1745,7 @@ static int report_vm_bms_soc(struct qpnp_bms_chip *chip)
 		time_since_last_change_sec=SOC_CHANGE_PER_SEC;
 	}
 	soc_change_time_count+=time_since_last_change_sec;
+	chip->last_soc_change_sec = last_change_sec;
 	printk("soc_change_time_count=%d time_since_last_change_sec=%d \n",soc_change_time_count,time_since_last_change_sec);
 #endif	
 
