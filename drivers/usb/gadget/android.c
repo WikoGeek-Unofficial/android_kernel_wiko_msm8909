@@ -98,6 +98,13 @@ static const char longname[] = "Gadget Android";
 #define MIDI_BUFFER_SIZE    1024
 #define MIDI_QUEUE_LENGTH   32
 
+//zhisheng.tan, Date20160412, add for WIK_FR_OPEN_PLATFORM_S0003 PC display name EJABMA-17 start
+#ifdef CONFIG_PROJECT_P4901_WIK_FR
+#define MANUFACTURER_STRING "WIKO"
+#define PRODUCT_STRING "TOMMY"
+#endif
+//zhisheng.tan, Date20160412, add for WIK_FR_OPEN_PLATFORM_S0003 PC display name EJABMA-17 end
+
 struct android_usb_function {
 	char *name;
 	void *config;
@@ -3558,10 +3565,18 @@ static int android_bind(struct usb_composite_dev *cdev)
 	device_desc.iProduct = id;
 
 	/* Default strings - should be updated by userspace */
+//zhisheng.tan, Date20160412, add for WIK_FR_OPEN_PLATFORM_S0003 PC display name EJABMA-17 start
+#ifdef CONFIG_PROJECT_P4901_WIK_FR
+	strlcpy(manufacturer_string, MANUFACTURER_STRING, sizeof(manufacturer_string) - 1);
+	strlcpy(product_string, PRODUCT_STRING, sizeof(product_string) - 1);
+	strlcpy(serial_string, "0123456789ABCDEF", sizeof(serial_string) - 1);
+#else
 	strlcpy(manufacturer_string, "Android",
 		sizeof(manufacturer_string) - 1);
 	strlcpy(product_string, "Android", sizeof(product_string) - 1);
 	strlcpy(serial_string, "0123456789ABCDEF", sizeof(serial_string) - 1);
+#endif
+//zhisheng.tan, Date20160412, add for WIK_FR_OPEN_PLATFORM_S0003 PC display name EJABMA-17 end
 
 	id = usb_string_id(cdev);
 	if (id < 0)

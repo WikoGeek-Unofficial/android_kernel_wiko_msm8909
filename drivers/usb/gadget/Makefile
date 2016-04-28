@@ -89,3 +89,11 @@ obj-$(CONFIG_USB_G_NCM)		+= g_ncm.o
 obj-$(CONFIG_USB_G_ACM_MS)	+= g_acm_ms.o
 obj-$(CONFIG_USB_G_ANDROID)	+= g_android.o
 obj-$(CONFIG_USB_GADGET_TARGET)	+= tcm_usb_gadget.o
+
+#zhisheng.tan, Date20160412, add for WIK_FR_OPEN_PLATFORM_S0003 PC display name EJABMA-17 start
+CONFIG_PROJECT_PRODUCT_NAME := $(shell echo CONFIG_PROJECT_$(TARGET_PRODUCT)_$(PROJECT_NAME) | tr a-z A-Z)
+ccflags-y += -D$(CONFIG_PROJECT_PRODUCT_NAME)
+$(warning ---add marco $(CONFIG_PROJECT_PRODUCT_NAME)---)
+#endif
+#zhisheng.tan, Date20160412, add for WIK_FR_OPEN_PLATFORM_S0003 PC display name EJABMA-17 end
+

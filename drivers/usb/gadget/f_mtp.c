@@ -275,11 +275,21 @@ static struct usb_descriptor_header *ss_ptp_descs[] = {
 	NULL,
 };
 
+//zhisheng.tan, Date20160412, add for WIK_FR_OPEN_PLATFORM_S0003 PC display name EJABMA-17 start
+#ifdef CONFIG_PROJECT_P4901_WIK_FR
+static struct usb_string mtp_string_defs[] = {
+	/* Naming interface "MTP" so libmtp will recognize us */
+	[INTERFACE_STRING_INDEX].s	= "TOMMY",
+	{  },	/* end of list */
+};
+#else
 static struct usb_string mtp_string_defs[] = {
 	/* Naming interface "MTP" so libmtp will recognize us */
 	[INTERFACE_STRING_INDEX].s	= "MTP",
 	{  },	/* end of list */
 };
+#endif
+//zhisheng.tan, Date20160412, add for WIK_FR_OPEN_PLATFORM_S0003 PC display name EJABMA-17 end
 
 static struct usb_gadget_strings mtp_string_table = {
 	.language		= 0x0409,	/* en-US */
