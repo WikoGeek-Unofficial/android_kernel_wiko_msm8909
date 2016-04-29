@@ -1121,7 +1121,7 @@ int calcute_soc(int maintain_times, int ocv_uv)
 	int bat_r=0;
 	int voltage_last=0;
 	int voltage_current=0;
-	int soc_temp, sco_by_ocv;
+	int soc_temp;
 //	int ret=0;
 	int voltage=0;
 	if(!mutex_flag_init)
@@ -1182,21 +1182,26 @@ int calcute_soc(int maintain_times, int ocv_uv)
 		soc_temp=0;
 	}
 
-	last_init_soc=(soc_temp+5)/10;   // four drop, five add 
-	
-	tinno_pr_debug("soc_temp=%d ,last_init_soc =%d \n",soc_temp, last_init_soc);
-	mutex_unlock(&tinno_calcute_lock);
 
-       if(last_init_soc == 0)
+	soc_temp=(soc_temp+5)/10;   // four drop, five add 
+
+       if((soc_temp == 0)&&(last_init_soc!=0))
    	{
    	//	sco_by_ocv =get_soc_by_voltage_by_temp(ocv_uv/1000);
          	if(voltage >POWER_OFF_VOLTAGE+100)
+         	{
 			last_init_soc=1;
+		}
+		printk("tinno :when soc_temp ==0, recheck  voltage =%d \n",voltage);
+   	}else{
+		last_init_soc=soc_temp;
+	}
+
+	tinno_pr_debug("soc_temp=%d ,last_init_soc =%d \n",soc_temp, last_init_soc);
+	mutex_unlock(&tinno_calcute_lock);
 
 
-		printk("tinno :when last_init_soc ==0, recheck  voltage =%d \n",voltage);
-   	}
-	
+
 	return last_init_soc;
 #endif	
 }
