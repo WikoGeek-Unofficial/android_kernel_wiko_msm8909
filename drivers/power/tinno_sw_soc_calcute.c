@@ -1141,10 +1141,11 @@ int calcute_soc(int maintain_times, int ocv_uv)
 	mutex_lock(&tinno_calcute_lock);
 	tinno_pr_debug("maintain_times=%d \n",maintain_times);
 	table_init();
-	bat_r=fgauge_read_r_bat_by_v(voltage);
-    	 tinno_pr_debug("g_table_temp=%d , voltage=%d,bat_r=%d bat_totals_columb_st=%d \n",g_table_temp,voltage,bat_r,bat_totals_columb_st);
 	bat_totals_columb_st=fgauge_get_Q_max_match_Current_and_temp(400,25);
-	voltage_last=fgauge_read_v_by_Qcost(bat_totals_columb_st-Q_left+elapse_columb/1000);
+	voltage_last=fgauge_read_v_by_Qcost(bat_totals_columb_st-Q_left+elapse_columb/1000);	
+	bat_r=fgauge_read_r_bat_by_v(voltage_last);//modify by alik
+    	 tinno_pr_debug("g_table_temp=%d , voltage=%d,bat_r=%d bat_totals_columb_st=%d \n",g_table_temp,voltage,bat_r,bat_totals_columb_st);
+
 
 	if(voltage_last!=voltage)
 	{
@@ -1171,6 +1172,7 @@ int calcute_soc(int maintain_times, int ocv_uv)
 		printk("tinno:calcute Froce set soc to 0,soc_voltage=%d,phy_voltage=%d ,soc_temp =%d\n",voltage_current,voltage,soc_temp/10);
 		last_vm_ocv=voltage*1000;
 		soc_temp=0;
+		force_init_soc(0,3400);
 	}
 	
 	if(soc_temp>993)
@@ -1187,12 +1189,12 @@ int calcute_soc(int maintain_times, int ocv_uv)
 
        if(last_init_soc == 0)
    	{
-   		sco_by_ocv =get_soc_by_voltage_by_temp(ocv_uv/1000);
-		if(sco_by_ocv >0)
+   	//	sco_by_ocv =get_soc_by_voltage_by_temp(ocv_uv/1000);
+         	if(voltage >POWER_OFF_VOLTAGE+100)
 			last_init_soc=1;
 
 
-		printk("tinno :when last_init_soc ==0, recheck  sco_by_ocv =%d,ocv_uv =%d\n",sco_by_ocv,ocv_uv);
+		printk("tinno :when last_init_soc ==0, recheck  voltage =%d \n",voltage);
    	}
 	
 	return last_init_soc;
