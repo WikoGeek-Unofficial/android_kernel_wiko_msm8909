@@ -547,7 +547,7 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 	pr_err("%s: read id: 0x%x expected id 0x%x:\n", __func__, chipid,
 		slave_info->sensor_id);
 
-	#ifdef TINNO_TARGET_V3901
+	#ifdef TINNO_TARGET_V3903
 	  if (!strcmp(sensor_name, "ov5648_sunwin") )
 		  rc=-1;
 	#endif
