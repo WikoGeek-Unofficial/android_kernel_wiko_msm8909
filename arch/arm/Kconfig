@@ -2397,6 +2397,9 @@ default n
 config TINNO_P4901
 bool "for tinno product P4901 dts build"
 default n
+config TINNO_P4903
+bool "for tinno product P4903 dts build"
+default n
 config TINNO_PRINTK_UART
 bool "for tinno product printk uart dts build"
 default n
