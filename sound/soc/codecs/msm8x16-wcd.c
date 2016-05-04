@@ -5227,10 +5227,15 @@ static int modem_state_callback(struct notifier_block *nb, unsigned long value,
 	bool timedout;
 	unsigned long timeout;
 
-	if (value == SUBSYS_BEFORE_SHUTDOWN)
+	if (value == SUBSYS_BEFORE_SHUTDOWN){		
+		//modem state change log  TN:peter
+		printk("\nADSP is about to power down. power down codec\n");
 		msm8x16_wcd_device_down(registered_codec);
+	}
 	else if (value == SUBSYS_AFTER_POWERUP) {
-
+		//modem state change log  TN:peter
+		printk("\nADSP is about to power up. bring up codec\n");
+		
 		dev_dbg(registered_codec->dev,
 			"ADSP is about to power up. bring up codec\n");
 
