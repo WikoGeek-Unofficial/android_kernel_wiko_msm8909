@@ -55,6 +55,13 @@
 extern void printascii(char *);
 #endif
 
+//++TN:peter
+#define PRINTK_DEBUG_PREFIX
+#ifdef PRINTK_DEBUG_PREFIX	
+static DEFINE_PER_CPU(char, printk_state);
+#endif
+//--TN:peter
+
 /* printk's without a loglevel use this.. */
 #define DEFAULT_MESSAGE_LOGLEVEL CONFIG_DEFAULT_MESSAGE_LOGLEVEL
 
@@ -412,9 +419,30 @@ static void log_store(int facility, int level,
 {
 	struct log *msg;
 	u32 size, pad_len;
+//++TN:peter
+#ifdef PRINTK_DEBUG_PREFIX
+    char tbuf[50];
+    unsigned tlen;
+    int this_cpu = smp_processor_id();
+    char state = __raw_get_cpu_var(printk_state);
+    if (state == 0) {
+    	__raw_get_cpu_var(printk_state) = ' ';
+    	state = ' ';
+    }
 
+    if (console_suspended == 0) {
+       tlen = snprintf(tbuf, sizeof(tbuf), "%c(%x)[%d:%s]",
+               state, this_cpu, current->pid, current->comm); 
+    } else {
+        tlen = snprintf(tbuf, sizeof(tbuf), "%c%x)", state, this_cpu);
+    }
+    /*printk prefix }*/
 	/* number of '\0' padding bytes to next message */
+	size = sizeof(struct log) + text_len + dict_len + tlen;
+#else
 	size = sizeof(struct log) + text_len + dict_len;
+#endif
+//--TN:peter	
 	pad_len = (-size) & (LOG_ALIGN - 1);
 	size += pad_len;
 
@@ -450,7 +478,15 @@ static void log_store(int facility, int level,
 
 	/* fill message */
 	msg = (struct log *)(log_buf + log_next_idx);
+//++TN:peter
+#ifdef PRINTK_DEBUG_PREFIX
+    memcpy(log_text(msg), tbuf, tlen);
+	memcpy(log_text(msg) + tlen, text, text_len);
+    text_len += tlen;
+#else
 	memcpy(log_text(msg), text, text_len);
+#endif
+//--TN:peter
 	msg->text_len = text_len;
 	memcpy(log_dict(msg), dict, dict_len);
 	msg->dict_len = dict_len;
@@ -1791,7 +1827,11 @@ asmlinkage int vprintk_emit(int facility, int level,
 	unsigned long flags;
 	int this_cpu;
 	int printed_len = 0;
-
+//++TN:peter
+#ifdef PRINTK_DEBUG_PREFIX	
+    int in_irq_disable = irqs_disabled();	
+#endif
+//--TN:peter
 	boot_delay_msec(level);
 	printk_delay();
 
@@ -1873,7 +1913,14 @@ asmlinkage int vprintk_emit(int facility, int level,
 
 	if (dict)
 		lflags |= LOG_PREFIX|LOG_NEWLINE;
-
+//++TN:peter
+#ifdef PRINTK_DEBUG_PREFIX
+    if (in_irq_disable)
+        __raw_get_cpu_var(printk_state) = '-';
+    else
+        __raw_get_cpu_var(printk_state) = ' ';
+#endif
+//--TN:peter
 	if (!(lflags & LOG_NEWLINE)) {
 		/*
 		 * Flush the conflicting buffer. An earlier newline was missing,
