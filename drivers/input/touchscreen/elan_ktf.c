@@ -1653,15 +1653,13 @@ static int touch_event_handler(void *unused)
 #else
         rc = elan_ts_recv_data(ts, buf);
         if(rc < 0){
-	    elan_info("[elan] continue\n");
             goto loop;
         } else {
-	    print_hex_dump(KERN_ERR, "", DUMP_PREFIX_OFFSET, 16, 1, buf, rc, true);
+	    print_hex_dump(KERN_ERR, "", DUMP_PREFIX_OFFSET, 16, 1, buf, rc, false);
 	}
         elan_ts_report_data(ts, buf);
 #endif
 loop:
-        elan_info("[elan] enable_irq\n");
         enable_irq(elan_irq);
     }while(!kthread_should_stop());
 
