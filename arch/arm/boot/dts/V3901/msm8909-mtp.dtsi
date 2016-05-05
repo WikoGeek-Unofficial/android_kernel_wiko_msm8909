@@ -145,7 +145,7 @@
 			vcc_i2c-supply = <&pm8909_l6>;
 			focaltech,name = "fts";
 			focaltech,family-id = <0x54>;
-			focaltech,reset-gpio = <&msm_gpio 16 0x00>;
+			focaltech,reset-gpio = <&msm_gpio 12 0x00>;
 			focaltech,irq-gpio =<&msm_gpio 13 0x00>;
 			focaltech,id1-gpio = <&msm_gpio 109 0x00>;
 			focaltech,id2-gpio = <&msm_gpio 114 0x00>;
