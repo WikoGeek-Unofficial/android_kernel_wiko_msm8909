@@ -1452,7 +1452,7 @@ static int elan_ts_recv_data(struct elan_ts_data *ts, uint8_t *buf)
         return -1;
     }
 
-    return 0;
+    return rc;
 }
 
 static void elan_ts_report_data(struct elan_ts_data *ts, uint8_t *buf)
@@ -1627,8 +1627,6 @@ static int touch_event_handler(void *unused)
     sched_setscheduler(current, SCHED_RR, &param);
 
     do{
-        //elan_info("[elan] enable_irq\n");
-        enable_irq(elan_irq);
         set_current_state(TASK_INTERRUPTIBLE);
         wait_event_interruptible(waiter, tpd_flag != 0);
         tpd_flag = 0;
@@ -1655,11 +1653,16 @@ static int touch_event_handler(void *unused)
 #else
         rc = elan_ts_recv_data(ts, buf);
         if(rc < 0){
-            continue;
-        }
+	    elan_info("[elan] continue\n");
+            goto loop;
+        } else {
+	    print_hex_dump(KERN_ERR, "", DUMP_PREFIX_OFFSET, 16, 1, buf, rc, true);
+	}
         elan_ts_report_data(ts, buf);
 #endif
-
+loop:
+        elan_info("[elan] enable_irq\n");
+        enable_irq(elan_irq);
     }while(!kthread_should_stop());
 
     return 0;
@@ -2109,6 +2112,7 @@ static int elan_ts_probe(struct i2c_client *client, const struct i2c_device_id *
         if (ret) {
             dev_err(&client->dev, "DT parsing failed\n");
         }
+
 	    ret = elan_power_switch(client, 1);
 		if (ret) {
 			elan_info("GTP power on failed.\n");
@@ -2235,6 +2239,7 @@ free_platform_hw:
         gpio_free(intr_gpio);
 pwr_off:
         elan_power_on(ts, false);
+    elan_power_switch(client, 0);
 
     return ret;
 }
@@ -2421,7 +2426,7 @@ static struct i2c_driver elan_ts_driver = {
     .class = I2C_CLASS_HWMON,
     .probe = elan_ts_probe,
     .remove = elan_ts_remove,
-#ifndef CONFIG_HAS_EARLYSUSPEND
+#if 0
     .suspend = elan_ts_suspend,
     .resume = elan_ts_resume,
 #endif
