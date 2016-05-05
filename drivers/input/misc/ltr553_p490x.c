@@ -417,7 +417,7 @@ static uint8_t ps_movavg_data_counter;
 #define PROXIMITY_CALI_DEFAULT_DATA  (0x0A)
 #define PROXIMITY_CALI_DEFAULT_THRESHOLD_HIGH_OFFSET (0x60)
 #define PROXIMITY_CALI_DEFAULT_THRESHOLD_LOW_OFFSET (0x5A)
-#define PROXIMITY_CALI_DATA_PATH  "/apedata/ps_cali_data"
+#define PROXIMITY_CALI_DATA_PATH  "/sensorcab/ps_cali_data"
 
 static int g_ps_cali_flag = 0;
 static int g_ps_base_value = 0;
