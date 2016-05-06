@@ -1629,6 +1629,21 @@ static const struct file_operations debug_dump_info_fops = {
 	.release	= single_release,
 };
 
+void fts_update_fw_info(struct fts_ts_data* data)
+{
+	fts_update_fw_ver(data);
+	fts_update_fw_vendor_id(data);
+
+#ifdef CONFIG_TINNO_DEV_INFO
+	sprintf(des_buf, "YEJI-V3901-FT6336U-%d.%d.%d",
+		data->fw_ver[0], data->fw_ver[1], data->fw_ver[2]);
+	SET_DEVINFO_STR(TouchPanel, des_buf);
+
+	sprintf(des_buf, "%d.%d.%d", data->fw_ver[0], data->fw_ver[1], data->fw_ver[2]);
+	SET_DEVINFO_STR(TouchPanel_Fw_Ver, des_buf);
+#endif
+}
+
 /*******************************************************************************
 *  Name: fts_ts_probe
 *  Brief:
@@ -1935,18 +1950,12 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 		fts_ctpm_auto_upgrade(client);
 	}
 #endif
-	fts_update_fw_ver(data);
-	fts_update_fw_vendor_id(data);
 
 #ifdef CONFIG_TINNO_DEV_INFO
 	CAREAT_TINNO_DEV_INFO(TouchPanel);
 	CAREAT_TINNO_DEV_INFO(TouchPanel_Fw_Ver);
-	sprintf(des_buf, "YEJI-V3901-FT6336U-%d.%d.%d",
-		data->fw_ver[0], data->fw_ver[1], data->fw_ver[2]);
-	SET_DEVINFO_STR(TouchPanel, des_buf);
-	sprintf(des_buf, "%d.%d.%d", data->fw_ver[0], data->fw_ver[1], data->fw_ver[2]);
-	SET_DEVINFO_STR(TouchPanel_Fw_Ver, des_buf);
 #endif
+	fts_update_fw_info(data);
 
 	FTS_STORE_TS_INFO(data->ts_info, data->family_id, data->pdata->name,
 			data->pdata->num_max_touches, data->pdata->group_id,
