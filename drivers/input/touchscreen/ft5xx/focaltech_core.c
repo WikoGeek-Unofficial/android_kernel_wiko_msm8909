@@ -431,18 +431,21 @@ static int fts_read_tp_psensor_data(struct fts_ts_data *data)
 *  Output: 
 *  Return: 
 *******************************************************************************/
+static int fts_read_Touchdata(struct fts_ts_data *data);
+static void fts_report_value(struct fts_ts_data *data);
 static irqreturn_t fts_ts_interrupt(int irq, void *dev_id)
 {
 	struct fts_ts_data *fts_ts = dev_id;
-
-	disable_irq_nosync(fts_ts->client->irq);
+	int ret=-1;
 
 	if (!fts_ts) {
 		pr_err("%s: Invalid fts_ts\n", __func__);
 		return IRQ_HANDLED;
 	}
 
-	queue_work(fts_ts->ts_workqueue, &fts_ts->touch_event_work);
+	ret = fts_read_Touchdata(fts_wq_data);
+	if (ret == 0)
+		fts_report_value(fts_wq_data);
 
 	return IRQ_HANDLED;
 }
@@ -620,23 +623,7 @@ static void fts_report_value(struct fts_ts_data *data)
 	input_sync(data->input_dev);
 }
 
-/*******************************************************************************
-*  Name: fts_touch_irq_work
-*  Brief:
-*  Input:
-*  Output: 
-*  Return: 
-*******************************************************************************/
-static void fts_touch_irq_work(struct work_struct *work)
-{
-	int ret = -1;
-	
-	ret = fts_read_Touchdata(fts_wq_data);
-	if (ret == 0)
-		fts_report_value(fts_wq_data);
-	
-	enable_irq(fts_wq_data->client->irq);
-}
+
 
 /*******************************************************************************
 *  Name: fts_gpio_configure
@@ -1006,7 +993,7 @@ static int fts_ts_stop(struct device *dev)
 	input_mt_report_pointer_emulation(data->input_dev, false);
 	input_sync(data->input_dev);
 
-	if (gpio_is_valid(data->pdata->reset_gpio)) {
+	if (!gpio_is_valid(data->pdata->reset_gpio)) {
 		txbuf[0] = FTS_REG_PMODE;
 		txbuf[1] = FTS_PMODE_HIBERNATE;
 		fts_i2c_write(data->client, txbuf, sizeof(txbuf));
@@ -1896,16 +1883,6 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 
 	/* make sure CTP already finish startup process */
 	msleep(data->pdata->soft_rst_dly);
-
-	INIT_WORK(&data->touch_event_work, fts_touch_irq_work);
-	data->ts_workqueue = create_workqueue(FTS_WORKQUEUE_NAME);
-	if (!data->ts_workqueue)
-	{
-		err = -ESRCH;
-		goto exit_create_singlethread;
-	}
-
-
 	/* check the controller id */
 	reg_addr = FTS_REG_ID;
 	err = fts_i2c_read(client, &reg_addr, 1, &reg_value, 1);
@@ -2172,9 +2149,9 @@ free_gpio:
 		gpio_free(pdata->reset_gpio);
 	if (gpio_is_valid(pdata->irq_gpio))
 		gpio_free(pdata->irq_gpio);
-exit_create_singlethread:
+//exit_create_singlethread:
 	printk("==singlethread error =\n");
-	//i2c_set_clientdata(client, NULL);
+	i2c_set_clientdata(client, NULL);
 err_gpio_req:
 	#ifdef MSM_NEW_VER
 	if (data->ts_pinctrl) {
@@ -2218,8 +2195,7 @@ static int fts_ts_remove(struct i2c_client *client)
 {
 	struct fts_ts_data *data = i2c_get_clientdata(client);
 
-	cancel_work_sync(&data->touch_event_work);
-	destroy_workqueue(data->ts_workqueue);
+
 
 	debugfs_remove_recursive(data->dir);
 
