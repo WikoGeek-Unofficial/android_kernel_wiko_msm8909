@@ -34,7 +34,12 @@ int battype=LI_ION_BATTERY;
 int battype=LI_POLYMER_BATTERY;
 #endif
 #else
+
+#ifdef CONFIG_TINNO_P4901
+#include "battery_meter_table_tinno_P4901.h"
+#else
 #include "battery_meter_table_tinno.h"
+#endif
 #endif
 
 //end 

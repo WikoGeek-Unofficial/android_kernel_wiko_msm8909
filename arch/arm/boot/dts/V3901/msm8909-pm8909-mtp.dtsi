@@ -18,7 +18,7 @@
 
 &pm8909_bms {
 	status = "ok";
-	qcom,resume-soc = <95>;
+	qcom,resume-soc = <98>;
 	qcom,use-reported-soc;
 	qcom,battery-data = <&mtp_batterydata>;
 };
