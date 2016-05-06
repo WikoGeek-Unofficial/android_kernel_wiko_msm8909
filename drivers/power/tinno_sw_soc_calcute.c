@@ -78,7 +78,8 @@ static long  elapse_columb=0;
 static int  current_temp=0;
 static int bat_init_soc=0;
 
-#ifdef CONFIG_TINNO_L5251 
+
+#if defined(CONFIG_TINNO_P4901)||defined(CONFIG_TINNO_P4903)||defined(CONFIG_TINNO_L5251)
 static int bat_totals_columb_st=0;
 static int gFG_columb_standard= 2500; //±Í≥∆µÁ¡ø
 #else 
