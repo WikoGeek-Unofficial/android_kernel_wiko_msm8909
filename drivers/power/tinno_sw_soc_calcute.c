@@ -35,7 +35,7 @@ int battype=LI_POLYMER_BATTERY;
 #endif
 #else
 
-#ifdef CONFIG_TINNO_P4901
+#if defined(CONFIG_TINNO_P4901)||defined(CONFIG_TINNO_P4903)
 #include "battery_meter_table_tinno_P4901.h"
 #else
 #include "battery_meter_table_tinno.h"
