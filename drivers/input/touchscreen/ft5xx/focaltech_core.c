@@ -1715,7 +1715,7 @@ static const struct file_operations debug_dump_info_fops = {
 
 //Begin ------ add by jun.wu@tinno.com for dev_tp_info(P4901)[EJABLSFRA-16] at 20151229
 #ifdef  CONFIG_TINNO_DEV_INFO
-static void update_fw_version(u16 ver)
+void fts_update_fw_version(u16 ver)
 {
 #if defined(CONFIG_TINNO_P4901)
 	sprintf(des_buf, "BOE-FT3327-P4901-%x",ver);
@@ -2050,7 +2050,7 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	//after update_fw_ver, major version, minor version
 #ifdef  CONFIG_TINNO_DEV_INFO
 //	update_fw_version((data->fw_ver[0]<<8)|(data->fw_ver[1]), data->fw_vendor_id);
-	update_fw_version(data->fw_ver[0]);
+	fts_update_fw_version(data->fw_ver[0]);
 #endif/*CONFIG_TINNO_DEV_INFO*/
 	//End   ------ add by jun.wu@tinno.com for dev_tp_info(P4901)[EJABLSFRA-16] at 20151229
 
