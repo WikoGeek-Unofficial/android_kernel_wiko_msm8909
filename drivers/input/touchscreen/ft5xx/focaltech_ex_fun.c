@@ -732,7 +732,11 @@ int fts_create_sysfs(struct i2c_client * client)
 	} 
 	else 
 	{
+		char upgrade_path[256] = { 0 };
 		pr_info("fts:%s() - sysfs_create_group() succeeded.\n",__func__);
+		sprintf(upgrade_path, "/sys/bus/i2c/devices/%d-%04x/ftsfwupdate",
+			client->adapter->nr, client->addr);
+		proc_symlink("tp_fw_upgrade", NULL, upgrade_path);
 	}
 	return err;
 }
