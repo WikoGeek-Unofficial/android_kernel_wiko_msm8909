@@ -153,6 +153,7 @@ struct elan_ts_data{
     int button_state;
 //For Firmare Update
     struct miscdevice firmware;
+    bool stop_input;
 };
 
 /************************************global elan data*************************************/
@@ -1644,7 +1645,9 @@ static int touch_event_handler(void *unused)
                 if(rc < 0){
                     continue;
                 }
-                elan_ts_report_data(ts, buf);
+                if (!private_ts->stop_input) {
+                    elan_ts_report_data(ts, buf);
+                }
             }
         }
         else{
@@ -2386,6 +2389,18 @@ static int fb_notifier_callback(struct notifier_block *self,
     int *blank;
     struct elan_ts_data *ts =
         container_of(self, struct elan_ts_data, fb_notif);
+
+    if (event == FB_EARLY_EVENT_BLANK) {
+        blank = evdata->data;
+
+        if (*blank == FB_BLANK_UNBLANK) {
+            elan_info("start input\n");
+            private_ts->stop_input = false;
+        } else if (*blank == FB_BLANK_POWERDOWN) {
+            elan_info("stop input\n");
+            private_ts->stop_input = true;
+        }
+    }
 
     if (evdata && evdata->data && event == FB_EVENT_BLANK &&
             ts && ts->client) {
