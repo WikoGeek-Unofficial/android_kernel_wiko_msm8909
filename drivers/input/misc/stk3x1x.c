@@ -73,7 +73,8 @@
 #ifdef QUALCOMM_PLATFORM
 	#include <linux/sensors.h>
 	#include <linux/regulator/consumer.h>	
-	//#define STK_QUALCOMM_POWER_CTRL
+	// Jake.L, DATE20160510, DJABM-668, DATE20160510-01 LINE
+	#define STK_QUALCOMM_POWER_CTRL
 #endif
 
 #ifdef SPREADTRUM_PLATFORM
@@ -1468,6 +1469,8 @@ static int32_t stk3x1x_enable_ps(struct stk3x1x_data *ps_data, uint8_t enable, u
 			reading = stk3x1x_get_ps_reading(ps_data);
 			printk( "%s: ps input event=%d, ps code = %d\n",__func__, near_far_state, reading);	
 		//add yaohua.li	start
+		// Jake.L, DATE20160510, DJABM-668, DATE20160510-01 START
+		#if 0
 		if(reading > (ps_data->pdata->ps_thd_h))
             {
                 u16 value_high,value_low;
@@ -1497,6 +1500,8 @@ static int32_t stk3x1x_enable_ps(struct stk3x1x_data *ps_data, uint8_t enable, u
                 printk("stk3x1x_enable_ps:value_high=%x,value_low=%x! \n",value_high,value_low);
 
             }
+		#endif  /* #if 0 */
+		// Jake.L, DATE20160510-01 END
 		//add yaohua.li end 
 		}
 	}
@@ -4422,7 +4427,7 @@ static int stk3x1x_suspend(struct device *dev)
     struct i2c_client *client = to_i2c_client(dev);	
 #endif
 
-	printk( "%s", __func__);	
+	printk( "%s\n", __func__);	
 #ifndef SPREADTRUM_PLATFORM	
 	mutex_lock(&ps_data->io_lock);  	
 #endif	
@@ -4492,7 +4497,7 @@ static int stk3x1x_resume(struct device *dev)
     struct i2c_client *client = to_i2c_client(dev);	
 #endif
 	
-	printk( "%s", __func__);	
+	printk( "%s\n", __func__);	
 #ifndef SPREADTRUM_PLATFORM		
 	mutex_lock(&ps_data->io_lock); 		
 #endif	
