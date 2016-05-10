@@ -1490,7 +1490,7 @@ static int qpnp_pon_probe(struct spmi_device *spmi)
 	u16 poff_sts = 0;
 	const char *s3_src;
 	u8 s3_src_reg;
-#ifdef TINNO_POWER_OFF_ALARM
+#ifdef CONFIG_TINNO_POWER_OFF_ALARM
 	char * start;
 #endif
 	pon = devm_kzalloc(&spmi->dev, sizeof(struct qpnp_pon),
