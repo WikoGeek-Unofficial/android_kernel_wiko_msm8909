@@ -243,8 +243,8 @@ core_param(Light_sensor, Light_sensor, int, 0444);
 struct stk3x1x_data *pstk3x1x_data = NULL;
 
 #define PROXIMITY_CALI_DEFAULT_DATA  (0x40)
-#define PROXIMITY_CALI_DEFAULT_THRESHOLD_HIGH_OFFSET (0x40)
-#define PROXIMITY_CALI_DEFAULT_THRESHOLD_LOW_OFFSET (0x3A)
+#define PROXIMITY_CALI_DEFAULT_THRESHOLD_HIGH_OFFSET (0x13)
+#define PROXIMITY_CALI_DEFAULT_THRESHOLD_LOW_OFFSET (0x10)
 #define PROXIMITY_CALI_DATA_PATH  "/sensorcab/ps_cali_data"
 
 static int g_ps_cali_flag = 0;
