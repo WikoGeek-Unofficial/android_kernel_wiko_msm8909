@@ -765,22 +765,22 @@ static void elan_ts_touch_down(struct elan_ts_data* ts,s32 id,s32 x,s32 y,s32 w)
     input_report_abs(ts->input_dev, ABS_MT_PRESSURE, 64);
     input_report_abs(ts->input_dev, ABS_MT_PRESSURE, 32);
 #else
- elan_info("report BTN_TOUCH \n");
+    //elan_info("report BTN_TOUCH \n");
     input_report_key(ts->input_dev, BTN_TOUCH, 1);
     input_report_abs(ts->input_dev, ABS_MT_POSITION_X, x);
- elan_info("report ABS_MT_POSITION_X \n");	
+    //elan_info("report ABS_MT_POSITION_X \n");
     input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, y);
- elan_info("report ABS_MT_POSITION_Y \n");	
-	
+    //elan_info("report ABS_MT_POSITION_Y \n");
+
     input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, w);
- elan_info("report ABS_MT_TOUCH_MAJOR \n");	
-	
+    //elan_info("report ABS_MT_TOUCH_MAJOR \n");
+
     input_report_abs(ts->input_dev, ABS_MT_WIDTH_MAJOR, w);
- elan_info("report ABS_MT_WIDTH_MAJOR \n");	
-	
+    //elan_info("report ABS_MT_WIDTH_MAJOR \n");
+
     input_report_abs(ts->input_dev, ABS_MT_TRACKING_ID, id);
- elan_info("report ABS_MT_TRACKING_ID \n");	
-	
+    //elan_info("report ABS_MT_TRACKING_ID \n");
+
     input_mt_sync(ts->input_dev);
 #endif
 //fix bug:EBBAL-2538
@@ -1521,7 +1521,7 @@ static void elan_ts_report_data(struct elan_ts_data *ts, uint8_t *buf)
         elan_ts_report_key(ts, button_byte);
     }
     else{
-        elan_info( "[elan] %d fingers", num);
+        //elan_info( "[elan] %d fingers", num);
 
         for(position=0; (position<finger_num) && (reported < num);position++){
             if((fbits & 0x01)){
