@@ -54,6 +54,12 @@ config QPNP_POWER_ON
 	  PNP PMIC. It currently supports reporting the change in status of
 	  the KPDPWR_N line (connected to the power-key).
 
+config TINNO_POWER_OFF_ALARM
+        bool "Support Tinno Power Off Alarm"
+        depends on OF_SPMI && SPMI && MSM_QPNP_INT && INPUT
+        help
+          Support Tinno Power Off Alarm.
+
 config QPNP_CLKDIV
 	tristate "QPNP PMIC clkdiv driver"
 	depends on OF_SPMI && SPMI

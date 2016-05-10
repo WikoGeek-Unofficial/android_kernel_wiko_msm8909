@@ -25,9 +25,8 @@
 #include <linux/log2.h>
 #include <linux/qpnp/power-on.h>
 
-#define TINNO_POWER_OFF_ALARM
 
-#ifdef TINNO_POWER_OFF_ALARM
+#ifdef CONFIG_TINNO_POWER_OFF_ALARM
 extern char *saved_command_line;
 #define ALARM_BOOT_STR   "androidboot.alarmboot=true"
 #endif
@@ -1548,7 +1547,7 @@ static int qpnp_pon_probe(struct spmi_device *spmi)
 		return rc;
 	}
 	boot_reason = ffs(pon_sts);
-#ifdef TINNO_POWER_OFF_ALARM
+#ifdef CONFIG_TINNO_POWER_OFF_ALARM
 	start=strstr(saved_command_line,ALARM_BOOT_STR);
 	if(start)
 	{
