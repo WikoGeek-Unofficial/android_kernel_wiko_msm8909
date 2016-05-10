@@ -50,6 +50,15 @@
 //add yaohua.li end
 #define DRIVER_VERSION  "3.9.0"
 
+//yaohua.li start 
+//#define __DEBUG__ 
+#ifdef __DEBUG__ 
+#define MessagePrint(fmt,args...) printk(fmt, ##args);
+#else
+#define MessagePrint(fmt,args...) 
+#endif
+//yaohua.li end
+#define STK_DEBUG_PRINTF  1
 /* Driver Settings */
 #define CONFIG_STK_PS_ALS_USE_CHANGE_THRESHOLD
 #ifdef CONFIG_STK_PS_ALS_USE_CHANGE_THRESHOLD
@@ -61,7 +70,7 @@
 #define STK_LUX_MAP
 //#define STK_TUNE0
 #define CALI_PS_EVERY_TIME
-#define STK_DEBUG_PRINTF
+
 //#define SPREADTRUM_PLATFORM
 #define STK_ALS_FIR
 //#define STK_IRS
@@ -282,7 +291,6 @@ static void stk3x1x_read_ps_cali_data(void);
 static void stk3x1x_ps_cali_start(void);
 static void stk3x1x_ps_cali_set_threshold(void);
 static uint16_t read_ps_adc_value(struct stk3x1x_data *ps_data);
-#define STK_DEBUG_PRINTF
 //add yaohua.li end
 #ifdef QUALCOMM_PLATFORM
 
@@ -2345,7 +2353,7 @@ static ssize_t stk_als_lux_store(struct device *dev, struct device_attribute *at
     ps_data->als_lux_last = value;
 	input_report_abs(ps_data->als_input_dev, ABS_MISC, value);
 	input_sync(ps_data->als_input_dev);
-	printk( "%s: als input event %ld lux\n",__func__, value);	
+	MessagePrint("%s: als input event %ld lux\n",__func__, value);	
 
     return size;
 }
@@ -3800,8 +3808,8 @@ static int  get_sensor_lux(int als)
 	}
 	
 	
-printk("anti_bounce:step_down_flag=%d step_up_flag=  %d step_complete_flag= %d | idx=%d orient_index=%d  \n", step_down_flag,step_up_flag,step_complete_flag,idx,orient_index);
-printk("step_value:anti_count =  %d orient_flag=%d opp_anti= %d\n",anti_count,orient_flag,opp_anti);
+MessagePrint("anti_bounce:step_down_flag=%d step_up_flag=  %d step_complete_flag= %d | idx=%d orient_index=%d  \n", step_down_flag,step_up_flag,step_complete_flag,idx,orient_index);
+MessagePrint("step_value:anti_count =  %d orient_flag=%d opp_anti= %d\n",anti_count,orient_flag,opp_anti);
 
 	if ((idx==0)&&(step_down_flag==0))
 	{	
@@ -4025,14 +4033,14 @@ static void stk_als_poll_work_func(struct work_struct *work)
         	stk_read_ffbm_flag();
     	}
 	#endif
-	printk( "ps_data->als_lux_last =  %d reading_lux = %d\n",ps_data->als_lux_last,reading_lux);	
+	MessagePrint( "ps_data->als_lux_last =  %d reading_lux = %d\n",ps_data->als_lux_last,reading_lux);	
 	if((abs(ps_data->als_lux_last - reading_lux) >= STK_ALS_CHANGE_THD)||(1 == g_ffbm_flag))
 	{
 		#ifdef STK_LUX_MAP
 #ifdef	ANTI_BOUNCE_SET
 		if(0 == g_ffbm_flag)
             		 reading_lux = get_sensor_lux(reading_lux);
-		printk( "ps_data->als_lux_last_1 =  %d reading_lux_1 = %d\n",ps_data->als_lux_last,reading_lux);	
+		MessagePrint( "ps_data->als_lux_last_1 =  %d reading_lux_1 = %d\n",ps_data->als_lux_last,reading_lux);	
 
 #else		
 		if(0 == g_ffbm_flag)
@@ -4057,7 +4065,7 @@ static void stk_als_poll_work_func(struct work_struct *work)
 			ktime_to_timespec(ts).tv_nsec);
 		input_sync(ps_data->als_input_dev);
 #ifdef STK_DEBUG_PRINTF				
-		printk( "%s: als input event %d lux\n",__func__, reading_lux);		
+		MessagePrint( "%s: als input event %d lux\n",__func__, reading_lux);		
 #endif		
 			
 	}
