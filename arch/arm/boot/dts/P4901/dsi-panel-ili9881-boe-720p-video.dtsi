@@ -181,7 +181,7 @@
 			15 01 00 00 00 00 02 71 B0
 			15 01 00 00 00 00 02 3A 24
 			15 01 00 00 00 00 02 6C 13	 //VCORE=1.4v decrease
-			15 01 00 00 00 00 02 AF 33   //ADD crrent bias decrease
+			15 01 00 00 00 00 02 AF 55   //ADD crrent bias decrease by PETER AT 5.11
 			15 01 00 00 00 00 02 35 1F
 			15 01 00 00 00 00 02 3B 9F   //pumping delay		
 			39 01 00 00 00 00 04 FF 98 81 01
