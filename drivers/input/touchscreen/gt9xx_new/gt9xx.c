@@ -39,7 +39,10 @@ static int main_clock_init_lock=0;
 
 //down load tp fw in kthread.
 #include <linux/kthread.h>
+//zgm add
+#if GTP_COMPATIBLE_MODE
 static struct task_struct *probe_thread = NULL;
+#endif
 //
 
 
@@ -2663,6 +2666,8 @@ void update_fw_version(u16 ver)
 }
 #endif
 
+//zgm add
+#if GTP_COMPATIBLE_MODE
 static int tpd_registration(void*_client)
 {
 	struct goodix_ts_data *ts = i2c_get_clientdata((struct i2c_client *)(_client));
@@ -2671,12 +2676,14 @@ static int tpd_registration(void*_client)
 	struct i2c_client * client=(struct i2c_client *)(_client);
 	GTP_INFO("tpd_registration");
 
+#if GTP_COMPATIBLE_MODE
         ret = gtp_gt9xxf_init(ts->client);
 	if (FAIL == ret)  
 	{     
 		GTP_INFO("Failed to init GT9XXF.");		
 		return -1;   
 	}
+#endif	
 	
     ret = gtp_i2c_test(client);
     if (ret < 0)
@@ -2780,7 +2787,7 @@ static int tpd_registration(void*_client)
 	tpd_has_probe_flag=TPD_PROBE_MAGIC_NUM;
 	return 0;
 }
-
+#endif
 
 
 /*******************************************************
