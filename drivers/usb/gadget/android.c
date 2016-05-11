@@ -104,7 +104,7 @@ static const char longname[] = "Gadget Android";
 #define PRODUCT_STRING "TOMMY"
 #elif defined(CONFIG_PROJECT_P4901_CAS_TR)
 #define MANUFACTURER_STRING "Casper"
-#define PRODUCT_STRING "CASPER_VIA_E1C"
+#define PRODUCT_STRING "CASPER_VIA_E1c"
 #endif
 //zhisheng.tan, Date20160412, add for WIK_FR_OPEN_PLATFORM_S0003 PC display name EJABMA-17 end
 

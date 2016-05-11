@@ -285,7 +285,7 @@ static struct usb_string mtp_string_defs[] = {
 #elif defined(CONFIG_PROJECT_P4901_CAS_TR)
 static struct usb_string mtp_string_defs[] = {
 	/* Naming interface "MTP" so libmtp will recognize us */
-	[INTERFACE_STRING_INDEX].s	= "CASPER_VIA_E1C",
+	[INTERFACE_STRING_INDEX].s	= "CASPER_VIA_E1c",
 	{  },	/* end of list */
 };
 #else
