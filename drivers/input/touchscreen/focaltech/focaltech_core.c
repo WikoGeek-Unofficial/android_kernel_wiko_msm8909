@@ -443,7 +443,7 @@ static irqreturn_t fts_ts_interrupt(int irq, void *dev_id)
 	}
 
 	ret = fts_read_Touchdata(fts_wq_data);
-	if (ret == 0 && !fts_ts->stop_input)
+	if (ret == 0)
 		fts_report_value(fts_wq_data);
 
 	return IRQ_HANDLED;
@@ -1186,19 +1186,8 @@ static int fb_notifier_callback(struct notifier_block *self,
 	struct fts_ts_data *fts_data =
 		container_of(self, struct fts_ts_data, fb_notif);
 
-	if (event == FB_EARLY_EVENT_BLANK) {
-		blank = evdata->data;
-
-		if (*blank == FB_BLANK_UNBLANK) {
-			printk("fts_ts start input\n");
-			fts_data->stop_input = false;
-		} else if (*blank == FB_BLANK_POWERDOWN) {
-			printk("fts_ts stop input\n");
-			fts_data->stop_input = true;
-		}
-	}
-
-	if (evdata && evdata->data && event == FB_EVENT_BLANK &&
+	//if (evdata && evdata->data && event == FB_EVENT_BLANK &&
+	if (evdata && evdata->data && event == FB_EARLY_EVENT_BLANK &&
 			fts_data && fts_data->client) {
 		blank = evdata->data;
 		if (*blank == FB_BLANK_UNBLANK)

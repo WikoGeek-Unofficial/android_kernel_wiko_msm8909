@@ -227,7 +227,6 @@ struct fts_ts_data {
 	struct pinctrl_state *pinctrl_state_suspend;
 	struct pinctrl_state *pinctrl_state_release;
 #endif
-	bool stop_input;
 };
 
 #ifdef CONFIG_TOUCHSCREEN_FTS_PSENSOR
