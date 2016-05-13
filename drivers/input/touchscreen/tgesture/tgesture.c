@@ -60,18 +60,14 @@
 #define APS_ERR(fmt, args...)    printk(KERN_ERR  APS_TAG"%s %d : "fmt, __FUNCTION__, __LINE__, ##args)
 #define APS_LOG(fmt, args...)    printk(KERN_ERR APS_TAG fmt, ##args)
 #define APS_DBG(fmt, args...)    printk(KERN_INFO APS_TAG fmt, ##args)         
-#define TGESTURE_DEBUG_FUNC       printk //()               do{\
+#define TGESTURE_DEBUG_FUNC       printk /*()               do{\
                                          printk("<<-GTP-FUNC->> Func:%s@Line:%d\n",__func__,__LINE__);\
-                                       }while(0)
+                                       }while(0)*/
 
-static	struct work_struct	eint_work;
-static struct input_dev *TGesture_key_dev;
 extern int gBackLightLevel;
 u8 gTGesture = 0;
 
 static int enable_key = 1;
-static s32 value_hall1_rev = 1;
-static s32 value_hall2_rev = 1;
 static s32 tgesture_state = 1; //open status
 int  bEnTGesture = 0;
 char Tg_buf[16]={"-1"};
@@ -132,8 +128,7 @@ static ssize_t TGesture_show_key(struct device_driver *ddri, char *buf)
 /*----------------------------------------------------------------------------*/
 static ssize_t TGesture_store_key(struct device_driver *ddri, const char *buf, size_t count)
 {
-    int enable, res;
-    u8 databuf[1];
+    int enable;
 	
 	if(1 == sscanf(buf, "%d", &enable))
 	{
@@ -161,8 +156,6 @@ static struct driver_attribute *TGesture_attr_list[] = {
 static ssize_t TGesture_config_read_proc(struct file *file, char __user *page, size_t size, loff_t *ppos)
 {
     char *ptr = page;
-    char temp_data[2] = {'a','\0'};
-    int i;
     if (*ppos)  // CMD call again
     {
         return 0;
@@ -175,7 +168,6 @@ static ssize_t TGesture_config_read_proc(struct file *file, char __user *page, s
 }
 static ssize_t TGesture_config_write_proc(struct file *filp, const char __user *buffer, size_t count, loff_t *off)
 {
-    s32 ret = 0;
 
     TGESTURE_DEBUG_FUNC("====LGC=========TGesture_config_write_procwrite count %d\n", count);
 
@@ -282,9 +274,8 @@ static int TGesture_probe(struct platform_device *pdev)
 /*----------------------------------------------------------------------------*/
 static int TGesture_remove(struct platform_device *pdev)
 {
-	
-	APS_FUN(); 
 	int err;	
+	APS_FUN(); 
          printk("==============TGesture_remove==================\n");		
 	if((err =  TGesture_delete_attr(&TGesture_driver.driver)))
 	{

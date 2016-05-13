@@ -1105,4 +1105,18 @@ config TOUCHSCREEN_FTS
 
          To compile this driver as a module, choose M here.
 
+config FT5XX_TGESTURE_FUNCTION
+	bool "syna tgesture function"
+	default n
+	help
+	  Say Y here if you use syna TP gesture function.
+
+config TP_TGESTURE
+	bool "TP gesture"
+	default n
+	help
+	  Say Y here if you use TP gesture function.
+
+          If unsure, say N.
+
 endif

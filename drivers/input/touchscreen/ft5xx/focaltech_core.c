@@ -1085,7 +1085,7 @@ if (bEnTGesture) {
 	  if (fts_updateinfo_curr.CHIP_ID==0x54 || fts_updateinfo_curr.CHIP_ID==0x58 || fts_updateinfo_curr.CHIP_ID==0x86)
 	  {
 	  	fts_write_reg(fts_i2c_client, 0xd1, 0xff);
-		fts_write_reg(fts_i2c_client, 0xd2, 0x14);
+		fts_write_reg(fts_i2c_client, 0xd2, 0x15);
 		fts_write_reg(fts_i2c_client, 0xd5, 0x40);
 		fts_write_reg(fts_i2c_client, 0xd6, 0xff);
 		fts_write_reg(fts_i2c_client, 0xd7, 0xff);

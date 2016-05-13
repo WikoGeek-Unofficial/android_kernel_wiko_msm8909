@@ -234,6 +234,8 @@ unsigned short coordinate_y[150] = {0};
 static int fts_check_gesture(int gesture_id)
 {
       int result;
+
+	printk("fts gestrue_id: %d\n", gesture_id);
 	switch(gesture_id)
 	{
 	        case GESTURE_LEFT:
