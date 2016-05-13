@@ -254,7 +254,8 @@ static int fts_check_gesture(int gesture_id)
                     result = KEY_GESTURE_U;
 	                break;
 	        case GESTURE_O:
-                    result = KEY_GESTURE_O;
+                    //result = KEY_GESTURE_O;
+		    result = 'o';
 	                break;
 	        case GESTURE_W:
                     result = KEY_GESTURE_W;
