@@ -1665,7 +1665,7 @@ skip_current_config:
 	tinno_pr_debug("power supply changed batt_psy\n");
 	power_supply_changed(&chip->batt_psy);
 }
-
+#if 0
 static int qpnp_lbc_system_temp_level_set(struct qpnp_lbc_chip *chip,
 								int lvl_sel)
 {
@@ -1696,7 +1696,7 @@ static int qpnp_lbc_system_temp_level_set(struct qpnp_lbc_chip *chip,
 	prev_therm_lvl = chip->therm_lvl_sel;
 	chip->therm_lvl_sel = lvl_sel;
 	if (chip->therm_lvl_sel == (chip->cfg_thermal_levels - 1)) {
-		/* Disable charging if highest value selected by */
+		//Disable charging if highest value selected by 
 		rc = qpnp_lbc_charger_enable(chip, THERMAL, 0);
 		if (rc < 0)
 			dev_err(chip->dev,
@@ -1721,7 +1721,7 @@ out:
 	spin_unlock_irqrestore(&chip->ibat_change_lock, flags);
 	return rc;
 }
-
+#endif
 #define MIN_COOL_TEMP		-300
 #define MAX_WARM_TEMP		1000
 #define HYSTERISIS_DECIDEGC	20
@@ -1925,7 +1925,7 @@ static int qpnp_batt_power_set_property(struct power_supply *psy,
 		qpnp_lbc_vinmin_set(chip, val->intval / 1000);
 		break;
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
-		qpnp_lbc_system_temp_level_set(chip, val->intval);
+//		qpnp_lbc_system_temp_level_set(chip, val->intval);
 		break;
 	default:
 		return -EINVAL;

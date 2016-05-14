@@ -2020,8 +2020,8 @@ static int msm_otg_set_power(struct usb_phy *phy, unsigned mA)
 	 */
 	if (motg->chg_type == USB_SDP_CHARGER)
 	{
-		printk("msm_otg_set_power %d \n",mA);
-	//	mA=500;
+		printk("msm_otg_set_power %d  force set to 500 \n",mA);
+		mA=500;
 		msm_otg_notify_charger(motg, mA);
 	}
 	return 0;
