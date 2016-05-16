@@ -63,6 +63,7 @@ extern int track_bat_voltage(int batvol,int bat_i);
 
 
 #define BMS_SOC_ADD_STEP    6
+#define BMS_SOC_JUMP_LIMIT  50
 
 #endif
 
@@ -3190,7 +3191,8 @@ static int calculate_initial_soc(struct qpnp_bms_chip *chip)
 					chip->calculated_soc = chip->last_soc;
 					tinno_pr_debug("tinno :Using shutdown SOC,chip->calculated_soc =%d \n"  ,chip->calculated_soc );
 				}
-				else
+
+				else if(abs(chip->shutdown_soc - chip->calculated_soc)<BMS_SOC_JUMP_LIMIT)
 				{
 					if(chip->calculated_soc > chip->shutdown_soc)
 					{
@@ -3206,6 +3208,8 @@ static int calculate_initial_soc(struct qpnp_bms_chip *chip)
 						chip->shutdown_soc_invalid = true;
 						tinno_pr_debug("tinno : calculated_soc < shutdown_soc Using PON SOC\n");
 					}
+				}else{ //abs(chip->shutdown_soc - chip->calculated_soc) > 50
+						chip->shutdown_soc_invalid = true;
 				}
 				
 			}
