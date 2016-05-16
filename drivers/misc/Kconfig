@@ -636,6 +636,12 @@ config UID_CPUTIME
 	help
 	  Per UID based cpu time statistics exported to /proc/uid_cputime
 
+config TINNO_SMART_ABC
+	bool "TINNO_SMART_ABC"
+	help
+	  Decide whether to support tinno smart auto brightness controller.
+	  and display backlight enhancemen	
+	  
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"

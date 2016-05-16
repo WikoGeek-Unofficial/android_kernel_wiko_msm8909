@@ -62,7 +62,7 @@
 /* Driver Settings */
 #define CONFIG_STK_PS_ALS_USE_CHANGE_THRESHOLD
 #ifdef CONFIG_STK_PS_ALS_USE_CHANGE_THRESHOLD
-#define STK_ALS_CHANGE_THD	10	/* The threshold to trigger ALS interrupt, unit: lux */	
+#define STK_ALS_CHANGE_THD	2	/* The threshold to trigger ALS interrupt, unit: lux */	
 #endif	/* #ifdef CONFIG_STK_PS_ALS_USE_CHANGE_THRESHOLD */
 #define STK_INT_PS_MODE			1	/* 1, 2, or 3	*/
 #define STK_POLL_PS
@@ -485,7 +485,9 @@ struct stk3x1x_data {
 #endif	
 };
 
+#ifndef CONFIG_TINNO_SMART_ABC
 #define ANTI_BOUNCE_SET
+#endif
 
 #if( !defined(CONFIG_STK_PS_ALS_USE_CHANGE_THRESHOLD))
 static uint32_t lux_threshold_table[] =
@@ -3692,11 +3694,19 @@ static enum hrtimer_restart stk_ps_tune0_timer_func(struct hrtimer *timer)
 #ifdef STK_POLL_ALS
 
 #ifdef STK_LUX_MAP
+#ifdef CONFIG_TINNO_SMART_ABC
+static uint16_t g_lux_sensor_map[11] = 
+{4,11,15,35,75,140,255,350,600,3899,8199};
+static uint16_t g_lux_to_sys_map[11] = 
+//{0,15, 50,105,170,250,850,1000,1600,2600};
+{0, 10,30,80,160,300,520,700,1000,2000,4000};
+#else
 static uint16_t g_lux_sensor_map[11] = 
 {5,60,120,240,450,680,1100,1800,2500,3360,4250};
 static uint16_t g_lux_to_sys_map[11] = 
 //{0,15, 50,105,170,250,850,1000,1600,2600};
 {0,15,40, 90,160,250,400,650, 900,1200,1500};
+#endif
 #define SENSOR_MAP_LENGTH  (sizeof(g_lux_sensor_map) / sizeof(g_lux_sensor_map[0]))
 
 
@@ -3769,6 +3779,7 @@ static void stk_read_ffbm_flag(void)
         set_fs(fs);  
     
 }
+
 #endif
 
 #ifdef ANTI_BOUNCE_SET
@@ -4052,6 +4063,11 @@ static void stk_als_poll_work_func(struct work_struct *work)
               	  	continue;
 	       	     	break;
 	       	 }
+	    if(vl_index >= SENSOR_MAP_LENGTH)
+	    	vl_index = SENSOR_MAP_LENGTH-1;
+	    if(vl_index <= 0)	
+	    	vl_index = 0;
+	    
 			reading_lux = g_lux_to_sys_map[vl_index];
 		}
 #endif		
