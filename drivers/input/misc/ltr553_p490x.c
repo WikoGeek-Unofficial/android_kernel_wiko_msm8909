@@ -1159,7 +1159,7 @@ static uint16_t read_als_adc_value_temp(struct ltr553_data *ltr553)
 
 #define LOW_TEMPERATURE
 #ifdef LOW_TEMPERATURE
-static int min_value_low_temperature=0x7ff;
+static int min_value_low_temperature=0x300;
 static int set_first_value_flag_low_temperature=0;
 static int reset_flag_low_temperature=0;
 
@@ -1200,7 +1200,7 @@ static int set_low_temperature_threshold_value(struct ltr553_data *obj,int ps)
 
 			pr_info(" set_low_temperature_threshold_value:PS is larger than g_ps_base_value, and threshold  need to be reset! \n");
 			pr_info(" set_low_temperature_threshold_value: ltr553  temp_value_high=%x, temp_value_low=%x! \n",temp_value_high, temp_value_low);
-		
+					
 		}
 		else
 		{
@@ -1223,7 +1223,6 @@ static int set_low_temperature_threshold_value(struct ltr553_data *obj,int ps)
 	}
 	
 	pr_info(" set_low_temperature_threshold_value: ltr553  temp_value_high=%x, temp_value_low=%x! \n",temp_value_high,temp_value_low);
-
 
 
 	obj->default_ps_highthresh = temp_value_high;
@@ -6744,7 +6743,7 @@ static void ltr553_read_ffbm_flag(void)
 static void low_temperature_value_all_reset(void)
 {
 
-	min_value_low_temperature=0x7ff;
+	min_value_low_temperature=0x300;
 	set_first_value_flag_low_temperature=0;
 	reset_flag_low_temperature=0;
 }
