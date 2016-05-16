@@ -505,6 +505,7 @@ static const struct qpnp_vadc_map_pt adcmap_btm_threshold[] = {
 		};
 	#endif
 #endif
+#endif
 
 
 
