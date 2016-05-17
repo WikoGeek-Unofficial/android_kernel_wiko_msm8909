@@ -78,12 +78,12 @@
 #define GTP_WITH_PEN          0
 #define GTP_PEN_HAVE_BUTTON   0    // active pen has buttons, function together with GTP_WITH_PEN
 
-#ifdef CONFIG_TINNO_L5251
+#if defined(CONFIG_TINNO_L5251) || defined(CONFIG_TINNO_P4903)
 #define GTP_GESTURE_WAKEUP    1    // gesture wakeup 
 #else
 #define GTP_GESTURE_WAKEUP    0    // gesture wakeup 
 #endif
-#define GTP_DEBUG_ON          0
+#define GTP_DEBUG_ON          1
 #define GTP_DEBUG_ARRAY_ON    0
 #define GTP_DEBUG_FUNC_ON     0
 

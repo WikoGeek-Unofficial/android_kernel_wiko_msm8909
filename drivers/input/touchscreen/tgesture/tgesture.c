@@ -64,9 +64,12 @@
                                          printk("<<-GTP-FUNC->> Func:%s@Line:%d\n",__func__,__LINE__);\
                                        }while(0)*/
 
+#define EVT_GESTURE_SWITCH_CHANGE 1
+
 extern int gBackLightLevel;
 u8 gTGesture = 0;
 
+static BLOCKING_NOTIFIER_HEAD(gesture_notifier_list);
 static int enable_key = 1;
 static s32 tgesture_state = 1; //open status
 int  bEnTGesture = 0;
@@ -202,6 +205,10 @@ if(atomic_read(&tp_write_flag))
         TGESTURE_DEBUG_FUNC("send config failed.");
     }
 */
+
+    blocking_notifier_call_chain(&gesture_notifier_list,
+            EVT_GESTURE_SWITCH_CHANGE, (void*)bEnTGesture);
+
     return count;
 }
 
@@ -243,8 +250,10 @@ static int TGesture_create_attr(struct device_driver *driver)
 }
 
 
-
-
+int TGesture_register_client(struct notifier_block *nb)
+{
+	return blocking_notifier_chain_register(&gesture_notifier_list, nb);
+}
 
 /*----------------------------------------------------------------------------*/
 

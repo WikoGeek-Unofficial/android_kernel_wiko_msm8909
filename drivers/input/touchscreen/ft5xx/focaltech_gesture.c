@@ -73,6 +73,8 @@
 #define FTS_GESTURE_OUTPUT_ADRESS 0xD3
 #define FTS_GESTURE_OUTPUT_UNIT_LENGTH 4
 
+#define KEYCODE_KEYTP 250
+
 /*******************************************************************************
 * Private enumerations, structures and unions using typedef
 *******************************************************************************/
@@ -338,15 +340,16 @@ int fts_read_Gestruedata(void)
 #ifdef CONFIG_FT5XX_TGESTURE_FUNCTION
               if(gestrue_id == GESTURE_DOUBLECLICK)
                 {
-                    input_report_key(ft5xx_key_dev,KEY_POWER, 1);
-                    input_report_key(ft5xx_key_dev,KEY_POWER, 0);
+                    gTGesture = 'u';
+                    input_report_key(ft5xx_key_dev,KEYCODE_KEYTP, 1);
+                    input_report_key(ft5xx_key_dev,KEYCODE_KEYTP, 0);
                     input_sync(ft5xx_key_dev);
               }
               else
                 {
                     gTGesture = fts_check_gesture(gestrue_id);
-                    input_report_key(ft5xx_key_dev,KEY_FT5XX_SENSOR, 1);
-                    input_report_key(ft5xx_key_dev,KEY_FT5XX_SENSOR, 0);
+                    input_report_key(ft5xx_key_dev,KEYCODE_KEYTP, 1);
+                    input_report_key(ft5xx_key_dev,KEYCODE_KEYTP, 0);
                     input_sync(ft5xx_key_dev);
                 }
 		 //fts_check_gesture(fts_input_dev,gestrue_id);
