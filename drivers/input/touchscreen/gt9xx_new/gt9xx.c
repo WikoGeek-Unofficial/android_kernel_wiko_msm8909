@@ -130,6 +130,9 @@ static s32 gtp_bak_ref_proc(struct goodix_ts_data *ts, u8 mode);
 //********** For GT9XXF End **********//
 
 #if GTP_GESTURE_WAKEUP
+#define EVT_GESTURE_SWITCH_CHANGE 1
+static struct notifier_block gesture_notifier;
+extern int TGesture_register_client(struct notifier_block *nb);
 extern  int ps_value_read(void);
 typedef enum
 {
@@ -155,6 +158,11 @@ int wake_up_irq_status=0;
 static  int gtp_sensor_id=0;
 #endif
 
+#ifdef CONFIG_TP_TGESTURE
+#define KEYCODE_KEYTP 250
+extern int bEnTGesture;
+extern u8 gTGesture;
+#endif
 
 
 #ifdef GTP_CONFIG_OF
@@ -622,9 +630,6 @@ static void goodix_ts_work_func(struct work_struct *work)
     s32 i  = 0;
     s32 ret = -1;
     struct goodix_ts_data *ts = NULL;
-#if GTP_GESTURE_WAKEUP
-	static int ps_status=0;
-#endif
 
 #if GTP_COMPATIBLE_MODE
     u8 rqst_buf[3] = {0x80, 0x43};  // for GT9XXF
@@ -641,65 +646,48 @@ static void goodix_ts_work_func(struct work_struct *work)
         return;
     }
 #if GTP_GESTURE_WAKEUP
-	if(wake_up_switch)
-	{
-			
-   			 if (DOZE_ENABLED == doze_status)
-			    {               
-			        ret = gtp_i2c_read(i2c_connect_client, doze_buf, 3);
-			        GTP_DEBUG("0x814B = 0x%02X", doze_buf[2]);
-				 ps_status=ps_value_read();	
-			        if ((ret > 0)&&(ps_status))
-			        {     
-					if ( doze_buf[2] == 'c')
-					{
-						//doze_status = DOZE_WAKEUP;
-						input_report_key(ts->input_dev, TINNO_KEY_CAMERA, 1);
-						input_sync(ts->input_dev);
-						input_report_key(ts->input_dev, TINNO_KEY_CAMERA, 0);
-						input_sync(ts->input_dev);
-						// clear 0x814B
-						doze_buf[2] = 0x00;
-						gtp_i2c_write(i2c_connect_client, doze_buf, 3);
-					}
-					else if ( doze_buf[2] == 'o')
-					{
-						//doze_status = DOZE_WAKEUP;
-						input_report_key(ts->input_dev, TINNO_KEY_LIGHT, 1);
-						input_sync(ts->input_dev);
-						input_report_key(ts->input_dev, TINNO_KEY_LIGHT, 0);
-						input_sync(ts->input_dev);
-						// clear 0x814B
-						doze_buf[2] = 0x00;
-						gtp_i2c_write(i2c_connect_client, doze_buf, 3);
-					}
-					else if (0xCC == doze_buf[2])
-					{
-					    GTP_INFO("Double click to light up the screen!");
-					   // doze_status = DOZE_WAKEUP;
-					    input_report_key(ts->input_dev, TINNO_KEY_WAKEUP, 1);
-					    input_sync(ts->input_dev);
-					    input_report_key(ts->input_dev, TINNO_KEY_WAKEUP, 0);
-					    input_sync(ts->input_dev);
-					    // clear 0x814B
-					    doze_buf[2] = 0x00;
-					    gtp_i2c_write(i2c_connect_client, doze_buf, 3);
-					}
-					else
-					{
-					    // clear 0x814B
-					    doze_buf[2] = 0x00;
-					    gtp_i2c_write(i2c_connect_client, doze_buf, 3);
-					    gtp_enter_doze(ts);
-					}
-			        }
-			        if (ts->use_irq)
-			        {
-			            gtp_irq_enable(ts);
-			        }
-			        return;
-			    }
-	 }
+	if (wake_up_switch) {
+		if (DOZE_ENABLED == doze_status) {
+			ret = gtp_i2c_read(i2c_connect_client, doze_buf, 3);
+			GTP_INFO("0x814B = %x", doze_buf[2]);
+			if (ret > 0) {
+				u8 gesture = doze_buf[2];
+
+				// clear 0x814B
+				doze_buf[2] = 0x00;
+				gtp_i2c_write(i2c_connect_client, doze_buf, 3);
+
+				if (gesture == 'c') {
+					gTGesture = 'c';
+					input_report_key(ts->input_dev, KEYCODE_KEYTP, 1);
+					input_report_key(ts->input_dev, KEYCODE_KEYTP, 0);
+					input_sync(ts->input_dev);
+				} else if (gesture == 'o') {
+					gTGesture = 'o';
+					input_report_key(ts->input_dev, KEYCODE_KEYTP, 1);
+					input_report_key(ts->input_dev, KEYCODE_KEYTP, 0);
+					input_sync(ts->input_dev);
+				} else if (gesture == 'm') {
+					gTGesture = 'm';
+					input_report_key(ts->input_dev, KEYCODE_KEYTP, 1);
+					input_report_key(ts->input_dev, KEYCODE_KEYTP, 0);
+					input_sync(ts->input_dev);
+				} else if (gesture == 0xCC) {
+					GTP_INFO("Double click to light up the screen!");
+					gTGesture = 'u';
+					input_report_key(ts->input_dev, KEYCODE_KEYTP, 1);
+					input_report_key(ts->input_dev, KEYCODE_KEYTP, 0);
+					input_sync(ts->input_dev);
+				} else {
+					gtp_enter_doze(ts);
+				}
+			}
+			if (ts->use_irq) {
+				gtp_irq_enable(ts);
+			}
+			return;
+		}
+	}
 #endif
 
     ret = gtp_i2c_read(ts->client, point_data, 12);
@@ -1991,6 +1979,7 @@ static s8 gtp_request_input_dev(struct goodix_ts_data *ts)
 	input_set_capability(ts->input_dev, EV_KEY, TINNO_KEY_WAKEUP);
 	input_set_capability(ts->input_dev, EV_KEY, TINNO_KEY_CAMERA);
 	input_set_capability(ts->input_dev, EV_KEY, TINNO_KEY_LIGHT);
+	input_set_capability(ts->input_dev, EV_KEY, KEYCODE_KEYTP);
 #endif 
 
 #if GTP_CHANGE_X2Y
@@ -2629,6 +2618,7 @@ static ssize_t store_wake_up_switch(struct device *dev,struct device_attribute *
     sscanf(buf ,"%d",&wake_up_switch);
     return size;
 }
+
 static DEVICE_ATTR(smart_wake_switch, 0644, show_wake_up_switch, store_wake_up_switch); //664
 
 #endif
@@ -2789,6 +2779,16 @@ static int tpd_registration(void*_client)
 }
 #endif
 
+#if GTP_GESTURE_WAKEUP
+static int goodix_ts_notifier_callback(struct notifier_block *self,
+				 unsigned long event, void *data)
+{
+	if (event == EVT_GESTURE_SWITCH_CHANGE) {
+		wake_up_switch = (int)data;
+	}
+	return 0;
+}
+#endif
 
 /*******************************************************
 Function:
@@ -2990,6 +2990,8 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
 #endif
 #if GTP_GESTURE_WAKEUP
   device_create_file(&client->dev, &dev_attr_smart_wake_switch);
+  gesture_notifier.notifier_call = goodix_ts_notifier_callback;
+  TGesture_register_client(&gesture_notifier);
 #endif
     tpd_has_probe_flag=TPD_PROBE_MAGIC_NUM;
     return 0;
