@@ -159,7 +159,7 @@ static  int gtp_sensor_id=0;
 #endif
 
 #ifdef CONFIG_TP_TGESTURE
-#define KEYCODE_KEYTP 250
+#define KEYCODE_KEYTP 251
 extern int bEnTGesture;
 extern u8 gTGesture;
 #endif

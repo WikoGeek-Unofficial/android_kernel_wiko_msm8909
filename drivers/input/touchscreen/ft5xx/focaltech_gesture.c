@@ -73,8 +73,6 @@
 #define FTS_GESTURE_OUTPUT_ADRESS 0xD3
 #define FTS_GESTURE_OUTPUT_UNIT_LENGTH 4
 
-#define KEYCODE_KEYTP 250
-
 /*******************************************************************************
 * Private enumerations, structures and unions using typedef
 *******************************************************************************/

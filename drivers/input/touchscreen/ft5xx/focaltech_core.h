@@ -251,6 +251,7 @@ struct fts_psensor_platform_data {
 #ifdef CONFIG_FT5XX_TGESTURE_FUNCTION
 #if FTS_GESTRUE_EN
 #define KEY_FT5XX_SENSOR 250
+#define KEYCODE_KEYTP 251
 extern struct input_dev *ft5xx_key_dev;
 extern u8 gTGesture;
 #endif
