@@ -269,7 +269,7 @@ static int TGesture_probe(struct platform_device *pdev)
 		return 0;
 	}
     // Create proc file system
-       tgesture_config_proc = proc_create(TGesture_CONFIG_PROC_FILE, 0664, NULL, &config_proc_ops);
+       tgesture_config_proc = proc_create(TGesture_CONFIG_PROC_FILE, 0666, NULL, &config_proc_ops);
      if (tgesture_config_proc == NULL)
     {
         TGESTURE_DEBUG_FUNC("create_proc_entry %s failed\n", TGesture_CONFIG_PROC_FILE);
