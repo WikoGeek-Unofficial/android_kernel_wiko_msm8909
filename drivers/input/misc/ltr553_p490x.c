@@ -5840,8 +5840,8 @@ static ssize_t setalshithrerange_store(struct device *dev,
 
 	return count;
 }
-
-static DEVICE_ATTR(setalshithrerange, 0644, NULL, setalshithrerange_store);
+static DEVICE_ATTR(setalshithrerange, 0333, NULL, setalshithrerange_store);
+//static DEVICE_ATTR(setalshithrerange, 0644, NULL, setalshithrerange_store);
 
 static ssize_t dispalsthrerange_show(struct device *dev,
 			struct device_attribute *attr, char *buf)
@@ -5936,8 +5936,8 @@ static ssize_t setpslothrerange_store(struct device *dev,
 
 	return count;
 }
-
-static DEVICE_ATTR(setpslothrerange, 0644, NULL, setpslothrerange_store);
+static DEVICE_ATTR(setpslothrerange, 0333, NULL, setpslothrerange_store);
+//static DEVICE_ATTR(setpslothrerange, 0644, NULL, setpslothrerange_store);
 
 
 static ssize_t setpshithrerange_store(struct device *dev,
@@ -6011,8 +6011,8 @@ static ssize_t setpshithrerange_store(struct device *dev,
 
 	return count;
 }
-
-static DEVICE_ATTR(setpshithrerange, 0644, NULL, setpshithrerange_store);
+static DEVICE_ATTR(setpshithrerange, 0333, NULL, setpshithrerange_store);
+//static DEVICE_ATTR(setpshithrerange, 0644, NULL, setpshithrerange_store);
 
 
 static ssize_t disppsthrerange_show(struct device *dev,
