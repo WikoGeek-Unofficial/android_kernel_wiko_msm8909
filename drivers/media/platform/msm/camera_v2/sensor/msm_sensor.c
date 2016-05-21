@@ -687,27 +687,35 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
 			sensor_i2c_client, 0x0100,
 			0x01, MSM_CAMERA_I2C_BYTE_DATA);
+					mdelay(3);
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
 			sensor_i2c_client, 0x5002,
 			0x20, MSM_CAMERA_I2C_BYTE_DATA);
+					mdelay(3);
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
 			sensor_i2c_client, 0x7010,
 			0x00, MSM_CAMERA_I2C_BYTE_DATA);
+					mdelay(3);
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
 			sensor_i2c_client, 0x3d84,
 			0xc0, MSM_CAMERA_I2C_BYTE_DATA);
+					mdelay(3);
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
 			sensor_i2c_client, 0x3d88,
 			0x70, MSM_CAMERA_I2C_BYTE_DATA);
+					mdelay(3);
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
 			sensor_i2c_client, 0x3d89,
 			0x10, MSM_CAMERA_I2C_BYTE_DATA);
+					mdelay(3);
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
 			sensor_i2c_client, 0x3d8a,
 			0x70, MSM_CAMERA_I2C_BYTE_DATA);
+					mdelay(3);
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
 			sensor_i2c_client, 0x3d8b,
 			0x29, MSM_CAMERA_I2C_BYTE_DATA);
+					mdelay(3);
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
 			sensor_i2c_client, 0x3d81,
 			0x01, MSM_CAMERA_I2C_BYTE_DATA);
@@ -733,11 +741,11 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 		{
 			return -ENODEV;
 		}
-		pr_err("%s: addr_mid is 0x%x:\n", __func__, addr_mid);
+		pr_err("P4901 %s: addr_mid is 0x%x:\n", __func__, addr_mid);
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_read(
 			sensor_i2c_client, addr_mid,
 			&mid, MSM_CAMERA_I2C_BYTE_DATA);
-		pr_err("%s: mid is %d:\n", __func__, mid);
+		pr_err("P4901 %s: mid is %d:\n", __func__, mid);
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
 			sensor_i2c_client, 0x5002,
 			0x28, MSM_CAMERA_I2C_BYTE_DATA);
@@ -745,18 +753,24 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 		if((!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_cmk", sizeof("ov5670_cmk"))))
 		{
 			if(mid == 8)
-				pr_err("ov5670_cmk Success match =%d\n",mid);
+				pr_err("P4901 ov5670_cmk Success match =%d\n",mid);
 			else
+				{
+				pr_err("P4901 ov5670_cmk NOT match =%d !!!!!!!!!!!!!!!! \n",mid);
 				return -ENODEV;
+				}
 		}
 		else if((!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_sunwin", sizeof("ov5670_sunwin"))) ||
 			(!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_sunwin_p4901", sizeof("ov5670_sunwin_p4901"))) ||
 			(!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_sunwin_p4903", sizeof("ov5670_sunwin_p4903"))))
 		{
 			if(mid == 6)
-				pr_err("ov5670_sunwin Success match =%d\n",mid);
+				pr_err("P4901 ov5670_sunwin Success match =%d\n",mid);
 			else
+				{
+			    pr_err("P4901 ov5670_sunwin NOT match =%d !!!!!!!!!!!!!!!! \n",mid);
 				return -ENODEV;
+				}
 		}
 	}
 	//mingji add end
