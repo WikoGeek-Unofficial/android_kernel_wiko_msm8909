@@ -33,6 +33,14 @@ typedef struct _R_PROFILE_STRUC
     int  voltage;
 } R_PROFILE_STRUC, *R_PROFILE_STRUC_P;
 
+
+typedef struct _SCALE_R_PROFILE_STRUC
+{ 
+    int  scale; 
+    int  bat_current;
+} SCALE_R_PROFILE_STRUC;
+
+
 typedef enum
 {
     T1_0C,
@@ -50,6 +58,16 @@ typedef enum
 // <Qcost, Battery_Voltage> Table
 // ============================================================
 
+SCALE_R_PROFILE_STRUC battery_scale_r_profile[]=
+{
+	{10,400},
+	{15,300},
+	{20,200},
+	{30,100},
+};
+
+#define TINNO_BAT_MIN_RESISTANCE  60 
+#define TINNO_BAT_RESISTANCE_SCALE_POINT   97
 
 BATTERY_Q_COST_PROFILE_STRUC battery_q_cost_profile_t3[] =
 {

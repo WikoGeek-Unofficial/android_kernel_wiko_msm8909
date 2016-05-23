@@ -15,6 +15,7 @@
 #include <linux/proc_fs.h>
 #include <linux/time.h>
 #include <linux/slab.h>
+#include <linux/power_supply.h>
 
 
 #ifdef CONFIG_TINNO_L5251
@@ -71,6 +72,9 @@ int fgauge_read_v_by_Qcost(int q_cost);
 
 extern int get_bat_voltage(void);
 extern int force_get_tbat(void);
+
+struct power_supply		*tinno_batt_psy;
+
 
 int g_table_temp=-225;
 int g_battery_temp=-225;
@@ -1117,6 +1121,45 @@ int get_last_vm_soc(void)
 	return last_init_soc;
 }
 
+#if defined(CONFIG_TINNO_P4901)||defined(CONFIG_TINNO_P4903)
+
+static bool is_battery_charging(void)
+{
+	union power_supply_propval ret = {0,};
+
+	if (tinno_batt_psy == NULL)
+		tinno_batt_psy = power_supply_get_by_name("battery");
+	if (tinno_batt_psy) {
+		/* if battery has been registered, use the type property */
+		tinno_batt_psy->get_property(tinno_batt_psy,
+					POWER_SUPPLY_PROP_CHARGE_TYPE, &ret);
+		return ret.intval != POWER_SUPPLY_CHARGE_TYPE_NONE;
+	}
+	/* Default to false if the battery power supply is not registered. */
+	tinno_pr_debug("battery power supply is not registered\n");
+	return false;
+}
+
+static int adjust_bat_resistance(int r_bat ,int bat_current)
+{
+	int i=0;
+	int r_bat_ret=0;
+	int table_len=sizeof(battery_scale_r_profile) / sizeof(SCALE_R_PROFILE_STRUC);
+	for(i=0;i<(table_len-1);i++)
+	{
+       	if(abs(bat_current)>=battery_scale_r_profile[i].bat_current)
+			break;
+	}
+	r_bat_ret=(r_bat*10)/battery_scale_r_profile[i].scale;
+	if(r_bat_ret<=TINNO_BAT_MIN_RESISTANCE)
+	{
+		r_bat_ret=TINNO_BAT_MIN_RESISTANCE;
+	}
+	printk("adjust_bat_register bat_current=%d ,r_bat =%d ,r_bat_ret=%d \n",bat_current,r_bat,r_bat_ret);
+	return r_bat_ret;
+}
+
+#endif
 int calcute_soc(int maintain_times, int ocv_uv)
 {
 
@@ -1152,6 +1195,16 @@ int calcute_soc(int maintain_times, int ocv_uv)
 	bat_r=fgauge_read_r_bat_by_v(voltage_last);//modify by alik
     	 tinno_pr_debug("g_table_temp=%d , voltage=%d,bat_r=%d bat_totals_columb_st=%d \n",g_table_temp,voltage,bat_r,bat_totals_columb_st);
 
+#if defined(CONFIG_TINNO_P4901)||defined(CONFIG_TINNO_P4903)
+	if(last_init_soc>=TINNO_BAT_RESISTANCE_SCALE_POINT)
+	{
+	   	if(is_battery_charging())
+	   	{
+			current_temp = (((voltage_last-voltage)*1000)*10) /bat_r;    //0.1mA
+	   		bat_r=adjust_bat_resistance(bat_r,current_temp/10);
+	   	}
+	}
+#endif	
 
 	if(voltage_last!=voltage)
 	{
