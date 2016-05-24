@@ -56,7 +56,7 @@
 #define GTP_HAVE_TOUCH_KEY    1
 #define GTP_POWER_CTRL_SLEEP  0    //power off when suspend
 #define GTP_ICS_SLOT_REPORT   0    // slot protocol 
-#if defined(CONFIG_TINNO_L5251) || defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903)
+#if defined(CONFIG_TINNO_L5251) || defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903) || defined (CONFIG_TINNO_P4901TK)
 #define GTP_AUTO_UPDATE       1    // auto update fw by .bin file as default
 #define GTP_HEADER_FW_UPDATE  1    // auto update fw by gtp_default_FW in gt9xx_firmware.h, function together with GTP_AUTO_UPDATE
 #define GTP_AUTO_UPDATE_CFG   0    // auto update config by .cfg file, function together with GTP_AUTO_UPDATE
@@ -66,7 +66,7 @@
 #define GTP_AUTO_UPDATE_CFG   0    // auto update config by .cfg file, function together with GTP_AUTO_UPDATE
 #endif
 //zgm add for GT615 - disable GTP_COMPATIBLE_MODE
-#if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903)
+#if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903) || defined (CONFIG_TINNO_P4901TK)
 #define GTP_COMPATIBLE_MODE   0    // compatible with GT9XXF
 #else
 #define GTP_COMPATIBLE_MODE   1    // compatible with GT9XXF

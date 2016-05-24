@@ -13,7 +13,7 @@
 #define _GT9XX_FIRMWARE_H_
 
 #if GTP_HEADER_FW_UPDATE
-#if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903)
+#if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903) || defined (CONFIG_TINNO_P4901TK)
 unsigned char gtp_default_FW[] = 
 {
             //TODO:Puts your update firmware data here!

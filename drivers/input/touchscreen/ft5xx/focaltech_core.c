@@ -1705,7 +1705,7 @@ static const struct file_operations debug_dump_info_fops = {
 #ifdef  CONFIG_TINNO_DEV_INFO
 void fts_update_fw_version(u16 ver)
 {
-#if defined(CONFIG_TINNO_P4901)
+#if defined(CONFIG_TINNO_P4901) || defined(CONFIG_TINNO_P4901TK)
 	sprintf(des_buf, "BOE-FT3327-P4901-%x",ver);
 #elif defined(CONFIG_TINNO_P4903)
 	sprintf(des_buf, "BOE-FT3327-P4903-%x",ver);

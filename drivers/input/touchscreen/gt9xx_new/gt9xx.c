@@ -154,7 +154,7 @@ int wake_up_irq_status=0;
 #define TINNO_KEY_LIGHT      603
 #endif
 #endif
-#if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903)
+#if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903) || defined (CONFIG_TINNO_P4901TK)
 static  int gtp_sensor_id=0;
 #endif
 
@@ -1544,7 +1544,7 @@ static s32 gtp_init_panel(struct goodix_ts_data *ts)
         return -1;
     }
     GTP_INFO("Sensor_ID: %d", sensor_id);
-#if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903)
+#if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903) || defined (CONFIG_TINNO_P4901TK)
 	gtp_sensor_id = sensor_id;
 #endif
 	/* parse config data*/
@@ -1827,7 +1827,7 @@ static s8 gtp_i2c_test(struct i2c_client *client)
   
     GTP_DEBUG_FUNC();
     //zgm change 5 to 2
-#if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903)	
+#if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903) || defined (CONFIG_TINNO_P4901TK)	
     while(retry++ < 2)
 #else
     while(retry++ < 5)
@@ -2640,7 +2640,7 @@ void update_fw_version(u16 ver)
 				sprintf(des_buf, "YEJI-GT950-LXXXX-%x-%d",ver,cfg_ver);
 		#endif
 	#endif
-#if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903)
+#if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903) || defined (CONFIG_TINNO_P4901TK)
 	if (5 == gtp_sensor_id)
     {
 		sprintf(des_buf, "TCL-GT615-P490x-%x-%d",ver,cfg_ver);
@@ -2891,7 +2891,7 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
     if (ret < 0)
     {
         //zgm add
-#if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903)		
+#if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903) || defined (CONFIG_TINNO_P4901TK)		
         GTP_GPIO_FREE(gtp_rst_gpio);
         GTP_GPIO_FREE(gtp_int_gpio);
 #endif		

@@ -36,7 +36,7 @@ int battype=LI_POLYMER_BATTERY;
 #endif
 #else
 
-#if defined(CONFIG_TINNO_P4901)||defined(CONFIG_TINNO_P4903)
+#if defined(CONFIG_TINNO_P4901)||defined(CONFIG_TINNO_P4903)||defined(CONFIG_TINNO_P4901TK)
 #include "battery_meter_table_tinno_P4901.h"
 #else
 #include "battery_meter_table_tinno.h"
@@ -83,7 +83,7 @@ static int  current_temp=0;
 static int bat_init_soc=0;
 
 
-#if defined(CONFIG_TINNO_P4901)||defined(CONFIG_TINNO_P4903)||defined(CONFIG_TINNO_L5251)
+#if defined(CONFIG_TINNO_P4901)||defined(CONFIG_TINNO_P4903)||defined(CONFIG_TINNO_P4901TK)||defined(CONFIG_TINNO_L5251)
 static int bat_totals_columb_st=0;
 static int gFG_columb_standard= 2500; //±ê³ÆµçÁ¿
 #else 
@@ -1121,7 +1121,7 @@ int get_last_vm_soc(void)
 	return last_init_soc;
 }
 
-#if defined(CONFIG_TINNO_P4901)||defined(CONFIG_TINNO_P4903)
+#if defined(CONFIG_TINNO_P4901)||defined(CONFIG_TINNO_P4903)||defined(CONFIG_TINNO_P4901TK)
 
 static bool is_battery_charging(void)
 {
@@ -1195,7 +1195,7 @@ int calcute_soc(int maintain_times, int ocv_uv)
 	bat_r=fgauge_read_r_bat_by_v(voltage_last);//modify by alik
     	 tinno_pr_debug("g_table_temp=%d , voltage=%d,bat_r=%d bat_totals_columb_st=%d \n",g_table_temp,voltage,bat_r,bat_totals_columb_st);
 
-#if defined(CONFIG_TINNO_P4901)||defined(CONFIG_TINNO_P4903)
+#if defined(CONFIG_TINNO_P4901)||defined(CONFIG_TINNO_P4903)||defined(CONFIG_TINNO_P4901TK)
 	if(last_init_soc>=TINNO_BAT_RESISTANCE_SCALE_POINT)
 	{
 	   	if(is_battery_charging())
