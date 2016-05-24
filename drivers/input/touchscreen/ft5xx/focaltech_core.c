@@ -927,14 +927,14 @@ static int fts_ts_start(struct device *dev)
 			dev_err(dev, "Cannot get active pinctrl state\n");
 	}
 	#endif
-
+#if 0
 	err = fts_gpio_configure(data, true);
 	if (err < 0) {
 		dev_err(&data->client->dev,
 			"failed to put gpios in resue state\n");
 		goto err_gpio_configuration;
 	}
-
+#endif
 	if (gpio_is_valid(data->pdata->reset_gpio)) {
 		gpio_set_value_cansleep(data->pdata->reset_gpio, 0);
 		msleep(data->pdata->hard_rst_dly);
@@ -948,7 +948,7 @@ static int fts_ts_start(struct device *dev)
 
 	return 0;
 
-err_gpio_configuration:
+//err_gpio_configuration:
 	#ifdef MSM_NEW_VER
 	if (data->ts_pinctrl) {
 		err = pinctrl_select_state(data->ts_pinctrl,
@@ -1022,18 +1022,19 @@ static int fts_ts_stop(struct device *dev)
 	}
 	#endif
 	
+#if 0
 	err = fts_gpio_configure(data, false);
 	if (err < 0) {
 		dev_err(&data->client->dev,
 			"failed to put gpios in suspend state\n");
 		goto gpio_configure_fail;
 	}
-
+#endif
 	data->suspended = true;
 
 	return 0;
 
-gpio_configure_fail:
+//gpio_configure_fail:
 	#ifdef MSM_NEW_VER
 	if (data->ts_pinctrl) {
 		err = pinctrl_select_state(data->ts_pinctrl,
@@ -2094,8 +2095,11 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 //END<REQ><><20150910>Add WAKEUP_GESTURE for ft5xx;xiongdajun
 	/**/
 	//#ifdef FTS_AUTO_UPGRADE
-	printk("********************Enter CTP Auto Upgrade********************\n");
-	fts_ctpm_auto_upgrade(client,data->fw_vendor_id,data->fw_ver);
+	#define STRING_BOOT_FTM_MODE "androidboot.mode=ffbm-01"
+	if (!strstr(saved_command_line, STRING_BOOT_FTM_MODE)) {
+		printk("********************Enter CTP Auto Upgrade********************\n");
+		fts_ctpm_auto_upgrade(client,data->fw_vendor_id,data->fw_ver);
+	}
 	//#endif 
 
 	//Begin ------ add by jun.wu@tinno.com for dev_tp_info(P4901)[EJABLSFRA-16] at 20151229
