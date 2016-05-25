@@ -89,6 +89,8 @@ ifeq ($(TARGET_PRODUCT),L5251)
 obj-$(CONFIG_SENSORS_LTR553)      += ltr553_l5251.o
 else ifeq ($(TARGET_PRODUCT),P4901)
 obj-$(CONFIG_SENSORS_LTR553)      += ltr553_p490x.o
+else ifeq ($(TARGET_PRODUCT),P4901TK)
+obj-$(CONFIG_SENSORS_LTR553)      += ltr553_p490x.o
 else ifeq ($(TARGET_PRODUCT),P4903)
 obj-$(CONFIG_SENSORS_LTR553)      += ltr553_p490x.o
 else
