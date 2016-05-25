@@ -1729,6 +1729,10 @@ static int report_vm_bms_soc(struct qpnp_bms_chip *chip)
 	static int soc_change_time_count=0;
        int allow_change_time_detal=0;
 #endif
+#ifdef CONFIG_TINNO_V3901
+	int save_soc=0;
+#endif
+
 #ifdef TINNO_SW_SOC_CALCUTE
 		int true_soc=0;
               int vm_ocv=0;
@@ -1875,7 +1879,29 @@ static int report_vm_bms_soc(struct qpnp_bms_chip *chip)
 		true_soc=get_last_vm_soc();
 		vm_ocv=get_last_vm_ocv();
 		printk("tinno :true_soc=%d ,vm_ocv=%d,chip->last_ocv_uv =%d \n",true_soc,vm_ocv,chip->last_ocv_uv);
-		backup_ocv_soc(chip, vm_ocv, true_soc);
+
+#ifdef CONFIG_TINNO_V3901
+		save_soc=true_soc;
+		if(chip->reported_soc_in_use){
+			if(chip->reported_soc==100)
+			{
+				save_soc=200-true_soc;
+			}
+		}else{
+			if(chip->last_soc==100)
+			{
+				save_soc=200-true_soc;
+			}
+		}
+
+		if(save_soc>(0x7f-2))
+		{
+			save_soc=save_soc-2;
+		}
+		printk("ture_soc :%d ,save_soc :%d  \n",true_soc,save_soc);
+#endif			
+		backup_ocv_soc(chip, vm_ocv, save_soc);
+		true_soc=get_last_vm_soc();
 #else
 	backup_ocv_soc(chip, chip->last_ocv_uv, chip->last_soc);
 #endif	
@@ -3083,6 +3109,9 @@ int get_bat_voltage(void)
 static int calculate_initial_soc(struct qpnp_bms_chip *chip)
 {
 	int rc, batt_temp = 0, est_ocv = 0;
+#ifdef CONFIG_TINNO_V3901
+	int hold_full_flag=0;
+#endif
 #ifdef TINNO_SW_SOC_CALCUTE	
        int chg_voltage=0; 
        int battery_voltage_temp=0;
@@ -3118,6 +3147,15 @@ static int calculate_initial_soc(struct qpnp_bms_chip *chip)
 	rc = read_shutdown_ocv_soc(chip);
 	if (rc < 0  || chip->dt.cfg_ignore_shutdown_soc)
 		chip->shutdown_soc_invalid = true;
+
+#ifdef CONFIG_TINNO_V3901
+		if((chip->shutdown_soc>100)&&(chip->shutdown_soc!= SOC_INVALID))
+		{
+			chip->shutdown_soc=200-chip->shutdown_soc;
+			hold_full_flag=1;
+			printk(" chip->shutdown_soc >100,adjust to:%d \n",chip->shutdown_soc);
+		}
+#endif			
 
 	if (chip->warm_reset) {
 		/*
@@ -3241,8 +3279,29 @@ static int calculate_initial_soc(struct qpnp_bms_chip *chip)
 		chip->warm_reset, est_ocv, chip->shutdown_soc_invalid,
 		chip->shutdown_ocv, chip->shutdown_soc, chip->last_soc,
 		chip->calculated_soc, chip->last_ocv_uv);
+
+#ifdef CONFIG_TINNO_V3901
+		if(hold_full_flag==1)
+		{
+			chip->charger_removed_since_full = true;
+			if(is_charger_present(chip))
+			{
+				chip->charger_reinserted = true;
+			}
+			chip->reported_soc = 100;
+			chip->reported_soc_delta = 100 - chip->last_soc;
+			chip->reported_soc_in_use = true;			
+			 printk("last Ui soc is full ,soc keep reported_soc =100! \n");
+		}
+#endif	
+	
 #ifdef TINNO_SW_SOC_CALCUTE
-		backup_ocv_soc(chip,  chip->last_ocv_uv, chip->last_soc);
+		if( chip->last_soc==100)
+		{
+		       backup_ocv_soc(chip,  chip->last_ocv_uv, 200-chip->last_soc);
+		}else{
+			backup_ocv_soc(chip,  chip->last_ocv_uv, chip->last_soc);
+		}
 #endif	
 
 
