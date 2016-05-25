@@ -540,11 +540,22 @@ static int8_t _ltr553_set_bit(struct i2c_client *client, uint8_t set,
 }
 
 #if 1
-//LINE<FFBAKK-119><DATE20141008><als lux map>zenghaihui
+#if defined (CONFIG_TINNO_SMART_ABC)
+#if defined (CONFIG_TINNO_P4901)
+static uint16_t g_lux_sensor_map[11] = 
+{4,10,40,145,300,565,995,1350,1930,10400,20950};//4901
+#else
+static uint16_t g_lux_sensor_map[11] = 
+{4,10,50,195,405,780,1375,1860,2665,11085,21210};//4903
+#endif
+static uint16_t g_lux_to_sys_map[11] = 
+{0,10,30,80,160,300,520,700,1000,2000,4000};
+#else
 static uint16_t g_lux_sensor_map[15] = 
 {4,10,30,40,70,100,150,200,250,300,400,600,1000,1200,1500};
 static uint16_t g_lux_to_sys_map[15] = 
 {0,15,20,35,55,85,115,155,210,290,360,520,820,1100,1500};
+#endif
 
 #define SENSOR_MAP_LENGTH  (sizeof(g_lux_sensor_map) / sizeof(g_lux_sensor_map[0]))
 
