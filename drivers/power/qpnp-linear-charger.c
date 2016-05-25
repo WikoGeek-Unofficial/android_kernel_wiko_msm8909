@@ -34,6 +34,8 @@ int chgr_getled_gpio;
 extern char *saved_command_line;
 #define CHARGER_MODE_BOOT   "androidboot.mode=charger"
 int chg_boot_flag=0;
+
+#define TINNO_INVALID_CURRENT -100
 /*
 #ifdef CONFIG_TINNO_L5221 
 #define USE_GPIO_RED_LED
@@ -79,7 +81,7 @@ extern int get_last_vm_ocv(void);
 int led_level=0;
 #endif
 
-//#define TINNO_DEBUG
+#define TINNO_DEBUG
 
 #if defined(TINNO_DEBUG)
 #ifndef pr_fmt
@@ -3574,9 +3576,11 @@ static int qpnp_lbc_main_probe(struct spmi_device *spmi)
 			get_prop_battery_voltage_now(chip),
 			get_prop_capacity(chip));
 #ifdef TINNO_CHG_DET	
-	chip_temp=chip;
+chip_temp=chip;
 tinno_pr_debug("qpnp driver init  ok!");
 #endif
+
+        chip->prev_max_ma=TINNO_INVALID_CURRENT;
 	return 0;
 
 unregister_batt:
