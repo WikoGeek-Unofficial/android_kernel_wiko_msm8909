@@ -132,7 +132,7 @@ extern int store_tp_info(const char *const str);
 *******************************************************************************/
 static unsigned char CTPM_FW[] = {
 	//#include "BOE_FT3x27_P4901_Ver0x11_20160120_app.i"
-	#include "BOE_FT3x27_P4901_Ver0x13_20160321_app.i"
+	#include "BOE_FT3x27_P4901_Ver0x14_20160525_app.i"
 };
 
 static unsigned char aucFW_PRAM_BOOT[] = {
