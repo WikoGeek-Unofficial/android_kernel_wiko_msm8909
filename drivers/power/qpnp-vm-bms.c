@@ -1899,9 +1899,12 @@ static int report_vm_bms_soc(struct qpnp_bms_chip *chip)
 			save_soc=save_soc-2;
 		}
 		printk("ture_soc :%d ,save_soc :%d  \n",true_soc,save_soc);
-#endif			
 		backup_ocv_soc(chip, vm_ocv, save_soc);
 		true_soc=get_last_vm_soc();
+#else		
+		backup_ocv_soc(chip, vm_ocv, true_soc);
+#endif			
+
 #else
 	backup_ocv_soc(chip, chip->last_ocv_uv, chip->last_soc);
 #endif	
