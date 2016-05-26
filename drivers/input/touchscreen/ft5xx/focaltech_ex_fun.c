@@ -70,12 +70,8 @@ static struct proc_dir_entry *fts_proc_entry;
 int apk_debug_flag = 0;
 #endif
 
-#ifdef  CONFIG_TINNO_DEV_INFO
-extern struct fts_ts_data *fts_wq_data;
-extern void fts_update_fw_vendor_id(struct fts_ts_data *data);
-extern void fts_update_fw_ver(struct fts_ts_data *data);
-extern void fts_update_fw_version(u16 ver);
-#endif
+extern struct fts_ts_data* fts_wq_data;
+extern void fts_update_fw_info(struct fts_ts_data* data);
 
 /*******************************************************************************
 * Static function prototypes
@@ -602,12 +598,8 @@ static ssize_t fts_fwupdate_store(struct device *dev, struct device_attribute *a
 		dev_err(dev, "%s ERROR:[FTS] upgrade failed ret=%d.\n", __func__, i_ret);
 	}
 
-#ifdef  CONFIG_TINNO_DEV_INFO
-	fts_update_fw_ver(fts_wq_data);
-	fts_update_fw_vendor_id(fts_wq_data);
-	fts_update_fw_version(fts_wq_data->fw_ver[0]);
-#endif
-
+	fts_update_fw_info(fts_wq_data);
+	
 	#if GTP_ESD_PROTECT
 		apk_debug_flag = 0;
 	#endif

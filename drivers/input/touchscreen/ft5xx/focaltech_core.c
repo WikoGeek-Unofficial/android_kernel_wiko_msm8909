@@ -585,7 +585,7 @@ static void fts_report_value(struct fts_ts_data *data)
 		{
 			input_mt_report_slot_state(data->input_dev, MT_TOOL_FINGER, true);
 			input_report_abs(data->input_dev, ABS_MT_TOUCH_MAJOR, event->area[i]);
-                  	// Modify by TINNO, Disable touch pressure
+			// Modify by TINNO, Disable touch pressure
 			//input_report_abs(data->input_dev, ABS_MT_PRESSURE, event->pressure[i]);
 			input_report_abs(data->input_dev, ABS_MT_POSITION_X, event->au16_x[i]);
 			input_report_abs(data->input_dev, ABS_MT_POSITION_Y, event->au16_y[i]);
@@ -1700,23 +1700,22 @@ static const struct file_operations debug_dump_info_fops = {
 	.release	= single_release,
 };
 
-//Begin ------ add by jun.wu@tinno.com for dev_tp_info(P4901)[EJABLSFRA-16] at 20151229
-#ifdef  CONFIG_TINNO_DEV_INFO
-void fts_update_fw_version(u16 ver)
+void fts_update_fw_info(struct fts_ts_data* data)
 {
+	fts_update_fw_ver(data);
+	fts_update_fw_vendor_id(data);
+
 #if defined(CONFIG_TINNO_P4901) || defined(CONFIG_TINNO_P4901TK)
-	sprintf(des_buf, "BOE-FT3327-P4901-%x",ver);
+	sprintf(des_buf, "BOE-FT3327-P4901-%x",data->fw_ver[0]);
 #elif defined(CONFIG_TINNO_P4903)
-	sprintf(des_buf, "BOE-FT3327-P4903-%x",ver);
+	sprintf(des_buf, "BOE-FT3327-P4903-%x",data->fw_ver[0]);
 #elif defined(CONFIG_TINNO_P4905)
-	sprintf(des_buf, "BOE-FT3327-P4905-%x",ver);
+	sprintf(des_buf, "BOE-FT3327-P4905-%x",data->fw_ver[0]);
 #endif
 	SET_DEVINFO_STR(TouchPanel,des_buf);
-	sprintf(des_buf, "%x",ver);
+	sprintf(des_buf, "%x",data->fw_ver[0]);
 	SET_DEVINFO_STR(TouchPanel_Fw_Ver,des_buf);
 }
-#endif/*CONFIG_TINNO_DEV_INFO*/
-//End   ------ add by jun.wu@tinno.com for dev_tp_info(P4901)[EJABLSFRA-16] at 20151229
 
 /*******************************************************************************
 *  Name: fts_ts_probe
@@ -1821,7 +1820,7 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	input_set_abs_params(input_dev, ABS_MT_POSITION_X, pdata->x_min, pdata->x_max, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_POSITION_Y, pdata->y_min, pdata->y_max, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_TOUCH_MAJOR, 0, 0x0f, 0, 0);
-  	// Modify by TINNO, Disable touch pressure
+	// Modify by TINNO, Disable touch pressure
 	//input_set_abs_params(input_dev, ABS_MT_PRESSURE, 0, 0xff, 0, 0);
 
 	err = input_register_device(input_dev);
@@ -2021,30 +2020,19 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 
 	dev_dbg(&client->dev, "touch threshold = %d\n", reg_value * 4);
 
-	fts_update_fw_ver(data);
-	fts_update_fw_vendor_id(data);
-
-	//Begin ------ add by jun.wu@tinno.com for dev_tp_info(P4901)[EJABLSFRA-16] at 20151229
-	//after update_fw_ver, major version, minor version
-#ifdef  CONFIG_TINNO_DEV_INFO
-//	update_fw_version((data->fw_ver[0]<<8)|(data->fw_ver[1]), data->fw_vendor_id);
-	fts_update_fw_version(data->fw_ver[0]);
-#endif/*CONFIG_TINNO_DEV_INFO*/
-	//End   ------ add by jun.wu@tinno.com for dev_tp_info(P4901)[EJABLSFRA-16] at 20151229
-
-       //Begin<REQ><><20150829>add for updata when bootloader;xiongdajun
-       dev_dbg(&client->dev, "data->fw_vendor_id is %d",data->fw_vendor_id );
-       if ( 0xA8 == data->fw_vendor_id || 0x00 == data->fw_vendor_id )
-      {
-            fts_ctpm_fw_upgrade_ReadVendorID(data->client, &data->fw_vendor_id);
-            gpio_direction_output(data->pdata->reset_gpio, 1);
-            msleep(3);//mdelay(1);
-            gpio_direction_output(data->pdata->reset_gpio, 0);
-            msleep(3);//mdelay(1);
-            gpio_direction_output(data->pdata->reset_gpio, 1);
-	     msleep(40);//mdelay(1);
-      }
-        //END<REQ><><20150829>add for when bootloader;xiongdajun
+	//Begin<REQ><><20150829>add for updata when bootloader;xiongdajun
+	dev_dbg(&client->dev, "data->fw_vendor_id is %d",data->fw_vendor_id );
+	if ( 0xA8 == data->fw_vendor_id || 0x00 == data->fw_vendor_id )
+	{
+		fts_ctpm_fw_upgrade_ReadVendorID(data->client, &data->fw_vendor_id);
+		gpio_direction_output(data->pdata->reset_gpio, 1);
+		msleep(3);//mdelay(1);
+		gpio_direction_output(data->pdata->reset_gpio, 0);
+		msleep(3);//mdelay(1);
+		gpio_direction_output(data->pdata->reset_gpio, 1);
+		msleep(40);//mdelay(1);
+	}
+	//END<REQ><><20150829>add for when bootloader;xiongdajun
 	FTS_STORE_TS_INFO(data->ts_info, data->family_id, data->pdata->name,
 			data->pdata->num_max_touches, data->pdata->group_id,
 			data->pdata->fw_vkey_support ? "yes" : "no",
@@ -2059,7 +2047,6 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 		fts_create_sysfs(client);
 	#endif
 
-	
 	#ifdef FTS_CTL_IIC
 		if (fts_rw_iic_drv_init(client) < 0)	
 		{
@@ -2070,15 +2057,15 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 ////Begin<REQ><><20150910>Add WAKEUP_GESTURE for ft5xx;xiongdajun
 #ifdef CONFIG_FT5XX_TGESTURE_FUNCTION
 	#if FTS_GESTRUE_EN
-		//fts_Gesture_init(input_dev);
-		//init_para(720,1280,0,0,0);
-       ft5xx_key_dev= input_allocate_device();
+	//fts_Gesture_init(input_dev);
+	//init_para(720,1280,0,0,0);
+	ft5xx_key_dev= input_allocate_device();
 	if (! ft5xx_key_dev) 
 	{
 		dev_err(&client->dev,"[syna]SY_key_dev: fail!\n");
 	}
-       __set_bit(EV_KEY,  ft5xx_key_dev->evbit);
-       __set_bit(KEY_FT5XX_SENSOR,  ft5xx_key_dev->keybit);
+	__set_bit(EV_KEY,  ft5xx_key_dev->evbit);
+	__set_bit(KEY_FT5XX_SENSOR,  ft5xx_key_dev->keybit);
 	__set_bit(KEY_POWER,  ft5xx_key_dev->keybit);
 	__set_bit(KEYCODE_KEYTP,  ft5xx_key_dev->keybit);
 	ft5xx_key_dev->id.bustype = BUS_HOST;
@@ -2107,6 +2094,7 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	CAREAT_TINNO_DEV_INFO(TouchPanel);
 	CAREAT_TINNO_DEV_INFO(TouchPanel_Fw_Ver);
 #endif/*CONFIG_TINNO_DEV_INFO*/
+	fts_update_fw_info(data);
 	//End   ------ add by jun.wu@tinno.com for dev_tp_info(P4901)[EJABLSFRA-16] at 20151229
 
 #if defined(CONFIG_FB)
