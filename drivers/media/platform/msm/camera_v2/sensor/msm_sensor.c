@@ -687,42 +687,44 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
 			sensor_i2c_client, 0x0100,
 			0x01, MSM_CAMERA_I2C_BYTE_DATA);
-					mdelay(3);
+					mdelay(1);
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
 			sensor_i2c_client, 0x5002,
 			0x20, MSM_CAMERA_I2C_BYTE_DATA);
-					mdelay(3);
+					mdelay(1);
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
 			sensor_i2c_client, 0x7010,
 			0x00, MSM_CAMERA_I2C_BYTE_DATA);
-					mdelay(3);
+					mdelay(1);
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
 			sensor_i2c_client, 0x3d84,
 			0xc0, MSM_CAMERA_I2C_BYTE_DATA);
-					mdelay(3);
+					mdelay(1);
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
 			sensor_i2c_client, 0x3d88,
 			0x70, MSM_CAMERA_I2C_BYTE_DATA);
-					mdelay(3);
+					mdelay(1);
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
 			sensor_i2c_client, 0x3d89,
 			0x10, MSM_CAMERA_I2C_BYTE_DATA);
-					mdelay(3);
+					mdelay(1);
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
 			sensor_i2c_client, 0x3d8a,
 			0x70, MSM_CAMERA_I2C_BYTE_DATA);
-					mdelay(3);
+					mdelay(1);
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
 			sensor_i2c_client, 0x3d8b,
 			0x29, MSM_CAMERA_I2C_BYTE_DATA);
-					mdelay(3);
+					mdelay(1);
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
 			sensor_i2c_client, 0x3d81,
 			0x01, MSM_CAMERA_I2C_BYTE_DATA);
-		msleep(5);
+		msleep(6);
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_read(
 			sensor_i2c_client, 0x7010,
 			&otp_flag, MSM_CAMERA_I2C_BYTE_DATA);
+		msleep(1);
+
 		pr_err("%s: otp_flag is %d:\n", __func__, otp_flag);
 
 		if ((otp_flag & 0xc0)== 0x40)
