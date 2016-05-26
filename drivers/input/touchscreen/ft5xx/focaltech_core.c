@@ -585,7 +585,8 @@ static void fts_report_value(struct fts_ts_data *data)
 		{
 			input_mt_report_slot_state(data->input_dev, MT_TOOL_FINGER, true);
 			input_report_abs(data->input_dev, ABS_MT_TOUCH_MAJOR, event->area[i]);
-			input_report_abs(data->input_dev, ABS_MT_PRESSURE, event->pressure[i]);
+                  	// Modify by TINNO, Disable touch pressure
+			//input_report_abs(data->input_dev, ABS_MT_PRESSURE, event->pressure[i]);
 			input_report_abs(data->input_dev, ABS_MT_POSITION_X, event->au16_x[i]);
 			input_report_abs(data->input_dev, ABS_MT_POSITION_Y, event->au16_y[i]);
 			touchs |= BIT(event->au8_finger_id[i]);
@@ -1820,7 +1821,8 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	input_set_abs_params(input_dev, ABS_MT_POSITION_X, pdata->x_min, pdata->x_max, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_POSITION_Y, pdata->y_min, pdata->y_max, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_TOUCH_MAJOR, 0, 0x0f, 0, 0);
-	input_set_abs_params(input_dev, ABS_MT_PRESSURE, 0, 0xff, 0, 0);
+  	// Modify by TINNO, Disable touch pressure
+	//input_set_abs_params(input_dev, ABS_MT_PRESSURE, 0, 0xff, 0, 0);
 
 	err = input_register_device(input_dev);
 	if (err) {
