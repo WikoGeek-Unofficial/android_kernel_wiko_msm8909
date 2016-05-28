@@ -96,6 +96,11 @@
 		cam_vio-supply = <&pm8916_l6>;
 	};
 
+	qcom,eeprom@6e{
+		cam_vdig-supply = <&pm8916_l2>;
+		cam_vio-supply = <&pm8916_l6>;
+	};
+
 	qcom,eeprom@21{
 		cam_vdig-supply = <&pm8916_l2>;
 		cam_vio-supply = <&pm8916_l6>;
