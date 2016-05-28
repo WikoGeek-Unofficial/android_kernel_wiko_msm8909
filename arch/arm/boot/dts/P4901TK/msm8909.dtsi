@@ -824,7 +824,7 @@
 
 		qcom,hsusb-otg-phy-init-seq = <0x73 0x80 0xffffffff>;
 		qcom,hsusb-otg-phy-type = <3>; /* SNPS Femto PHY */
-		qcom,hsusb-otg-mode = <3>; /* OTG DEVICE only */
+		qcom,hsusb-otg-mode = <1>; /* DEVICE only */
 		qcom,hsusb-otg-otg-control = <2>; /* PMIC */
 		qcom,otg_en_gpio = <&msm_gpio 111 0x00>; /* GPIO */
 		qcom,dp-manual-pullup;
