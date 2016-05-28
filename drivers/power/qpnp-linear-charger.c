@@ -1953,8 +1953,8 @@ static int qpnp_batt_power_get_property(struct power_supply *psy,
 		{
 			val->intval = POWER_SUPPLY_STATUS_DISCHARGING;
 		}
-		#endif
 		printk("status otg_vbus_state =%d\n",otg_vbus_state);
+		#endif
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
 		val->intval = get_prop_charge_type(chip);
