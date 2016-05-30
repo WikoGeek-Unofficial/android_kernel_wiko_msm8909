@@ -138,7 +138,7 @@ struct goodix_ts_data {
     u8 rqst_processing;
     u8 is_950;
 #endif
-    
+    struct work_struct fb_notify_work;
 };
 
 extern u16 show_len;

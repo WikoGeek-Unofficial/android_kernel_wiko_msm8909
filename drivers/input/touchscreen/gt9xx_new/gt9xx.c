@@ -93,6 +93,8 @@ static const struct file_operations config_proc_ops = {
 static int gtp_register_powermanger(struct goodix_ts_data *ts);
 static int gtp_unregister_powermanger(struct goodix_ts_data *ts);
 
+static void fb_notify_resume_work(struct work_struct *work);
+
 #if GTP_CREATE_WR_NODE
 extern s32 init_wr_node(struct i2c_client*);
 extern void uninit_wr_node(void);
@@ -2841,6 +2843,7 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
 	gtp_int_gpio = GTP_INT_PORT;
 #endif
     INIT_WORK(&ts->work, goodix_ts_work_func);
+    INIT_WORK(&ts->fb_notify_work, fb_notify_resume_work);
     ts->client = client;
     spin_lock_init(&ts->irq_lock);          // 2.6.39 later
     // ts->irq_lock = SPIN_LOCK_UNLOCKED;   // 2.6.39 & before
@@ -3185,6 +3188,12 @@ static void goodix_ts_resume(struct goodix_ts_data *ts)
 //	msleep(200);
 }
 
+static void fb_notify_resume_work(struct work_struct *work)
+{
+	struct goodix_ts_data *ts =
+	    container_of(work, struct goodix_ts_data, fb_notify_work);
+	goodix_ts_resume(ts);
+}
 
 #if  defined(CONFIG_FB)	
 /* frame buffer notifier block control the suspend/resume procedure */
@@ -3198,11 +3207,17 @@ static int gtp_fb_notifier_callback(struct notifier_block *noti, unsigned long e
 		blank = ev_data->data;
 		if (*blank == FB_BLANK_UNBLANK) {
 			GTP_DEBUG("Resume by fb notifier.");
-			goodix_ts_resume(ts);
+			//{ Modify by Zidong: defer resume to wq
+			//goodix_ts_resume(ts);
+			schedule_work(&ts->fb_notify_work);
+			//}
 				
 		}
 		else if (*blank == FB_BLANK_POWERDOWN) {
 			GTP_DEBUG("Suspend by fb notifier.");
+			//{ Modify by Zidong: defer resume to wq
+			flush_work(&ts->fb_notify_work);
+			//}
 			goodix_ts_suspend(ts);
 		}
 	}
