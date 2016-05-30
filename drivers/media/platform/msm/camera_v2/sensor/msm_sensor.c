@@ -35,7 +35,6 @@ int camera_found_number=0;
 #endif
 
 
-
 #undef CDBG
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
 
@@ -719,7 +718,7 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
 			sensor_i2c_client, 0x3d81,
 			0x01, MSM_CAMERA_I2C_BYTE_DATA);
-		msleep(6);
+		msleep(10);
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_read(
 			sensor_i2c_client, 0x7010,
 			&otp_flag, MSM_CAMERA_I2C_BYTE_DATA);
