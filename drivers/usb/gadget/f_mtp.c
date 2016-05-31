@@ -282,7 +282,7 @@ static struct usb_string mtp_string_defs[] = {
 	[INTERFACE_STRING_INDEX].s	= "TOMMY",
 	{  },	/* end of list */
 };
-#elif defined(CONFIG_PROJECT_P4901_CAS_TR)
+#elif (defined(CONFIG_PROJECT_P4901_CAS_TR) || defined(CONFIG_PROJECT_P4901TK_CAS_TR))
 static struct usb_string mtp_string_defs[] = {
 	/* Naming interface "MTP" so libmtp will recognize us */
 	[INTERFACE_STRING_INDEX].s	= "CASPER_VIA_E1c",
