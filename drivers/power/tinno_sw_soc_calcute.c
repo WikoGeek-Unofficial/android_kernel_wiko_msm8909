@@ -1214,6 +1214,16 @@ int calcute_soc(int maintain_times, int ocv_uv)
 	    	   elapse_columb = (current_temp*maintain_times/36) + elapse_columb; //0.001mAh
 	    	}
 	}
+
+	if((Q_left*1000-elapse_columb)>bat_totals_columb_st*1000)
+	{
+		printk("The columb is overflow,adjust it from %ld  ",elapse_columb);
+		elapse_columb=Q_left*1000-bat_totals_columb_st*1000;
+		printk(" to  %ld \n ",elapse_columb);
+	}
+
+
+	
 	if((Q_left*1000-elapse_columb)==0)
 	{
 		soc_temp=0;
