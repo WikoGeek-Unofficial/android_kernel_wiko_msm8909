@@ -1549,7 +1549,7 @@ static void qpnp_lbc_set_appropriate_current(struct qpnp_lbc_chip *chip)
 #ifdef TINNO_HIGH_VOLTAGE_BATTERY
 		battery_voltage_temp=get_last_vm_ocv()/1000;
 		printk("battery_voltage_temp =%d g_battery_temp=%d \n",battery_voltage_temp,g_battery_temp);
-		if((battery_voltage_temp>4000)&&(g_battery_temp>=45))
+		if((battery_voltage_temp>4100)&&(g_battery_temp>=45))
 		{
 			chip->therm_lvl_sel=3;
 		}
