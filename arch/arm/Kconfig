@@ -2394,6 +2394,9 @@ default n
 config TINNO_V3903
 bool "for tinno product V3903 dts build"
 default n
+config TINNO_T3903
+bool "for tinno product V3903 dts build"
+default n
 config TINNO_P4901
 bool "for tinno product P4901 dts build"
 default n
