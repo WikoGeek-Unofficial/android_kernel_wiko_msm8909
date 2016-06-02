@@ -28,7 +28,10 @@ DEF_TINNO_DEV_INFO(sub_camera);
 
 static char sub_des_buf[100];
 static char main_des_buf[100];
+static int p4901_match_camera_id=-1;
 
+#define OV5670_CMK      0
+#define OV5670_SUNWIN   1
 
 int camera_found_number=0;
 
@@ -677,7 +680,8 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 
 	//mingji add begin
 	pr_err("%s: sensor_name is %s:\n", __func__, sensor_name);
-	if ((chipid == 0x5670) &&
+		
+	if ((p4901_match_camera_id==-1)&&(chipid == 0x5670) &&
 		((!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_cmk", sizeof("ov5670_cmk"))) ||
 		(!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_sunwin", sizeof("ov5670_sunwin"))) ||
 		(!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_sunwin_p4901", sizeof("ov5670_sunwin_p4901"))) ||
@@ -718,7 +722,7 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
 			sensor_i2c_client, 0x3d81,
 			0x01, MSM_CAMERA_I2C_BYTE_DATA);
-		msleep(10);
+		msleep(5);
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_read(
 			sensor_i2c_client, 0x7010,
 			&otp_flag, MSM_CAMERA_I2C_BYTE_DATA);
@@ -742,7 +746,7 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 		{
 			return -ENODEV;
 		}
-		pr_err("P4901 %s: addr_mid is 0x%x:\n", __func__, addr_mid);
+		//pr_err("P4901 %s: addr_mid is 0x%x:\n", __func__, addr_mid);
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_read(
 			sensor_i2c_client, addr_mid,
 			&mid, MSM_CAMERA_I2C_BYTE_DATA);
@@ -754,7 +758,10 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 		if((!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_cmk", sizeof("ov5670_cmk"))))
 		{
 			if(mid == 8)
+				{
+				p4901_match_camera_id=OV5670_CMK;
 				pr_err("P4901 ov5670_cmk Success match =%d\n",mid);
+				}
 			else
 				{
 				pr_err("P4901 ov5670_cmk NOT match =%d !!!!!!!!!!!!!!!! \n",mid);
@@ -766,7 +773,10 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 			(!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_sunwin_p4903", sizeof("ov5670_sunwin_p4903"))))
 		{
 			if(mid == 6)
+				{
+				p4901_match_camera_id=OV5670_SUNWIN;
 				pr_err("P4901 ov5670_sunwin Success match =%d\n",mid);
+				}
 			else
 				{
 			    pr_err("P4901 ov5670_sunwin NOT match =%d !!!!!!!!!!!!!!!! \n",mid);
