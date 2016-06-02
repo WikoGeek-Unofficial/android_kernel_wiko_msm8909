@@ -2645,7 +2645,7 @@ void update_fw_version(u16 ver)
 #if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903) || defined (CONFIG_TINNO_P4901TK)
 	if (5 == gtp_sensor_id)
     {
-		sprintf(des_buf, "TCL-GT615-P490x-%x-%d",ver,cfg_ver);
+		sprintf(des_buf, "TCL-P490x-GT615-%d", cfg_ver);
 	}
     else
 	{
@@ -2952,6 +2952,7 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
 #endif
 
 #if GTP_AUTO_UPDATE
+    ts->force_update = false;
     ret = gup_init_update_proc(ts);
     if (ret < 0)
     {

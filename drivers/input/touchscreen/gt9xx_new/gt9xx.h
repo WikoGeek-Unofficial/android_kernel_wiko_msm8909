@@ -139,6 +139,7 @@ struct goodix_ts_data {
     u8 is_950;
 #endif
     struct work_struct fb_notify_work;
+    bool force_update;
 };
 
 extern u16 show_len;

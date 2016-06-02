@@ -2337,13 +2337,16 @@ s32 gup_update_proc(void *dir)
         goto file_fail;
     }
     
-    ret = gup_enter_update_judge(&fw_head);
-    if(FAIL == ret)
-    {
-        GTP_ERROR("[update_proc]Check *.bin file fail.");
-        goto file_fail;
+    if (ts->force_update) {
+        dev_dbg(&ts->client->dev, "Enter force update.");
+    } else {
+        ret = gup_enter_update_judge(&fw_head);
+        if(FAIL == ret) {
+            GTP_ERROR("[update_proc]Check *.bin file fail.");
+            goto file_fail;
+        }
     }
-    
+
     ts->enter_update = 1;
     gtp_irq_disable(ts);
 #if GTP_ESD_PROTECT
@@ -2518,12 +2521,70 @@ file_fail:
     }
 }
 
+static ssize_t gtp_force_fw_upgrade_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t size)
+{
+	struct goodix_ts_data *ts = dev_get_drvdata(dev);
+	unsigned int val;
+	int ret;
+
+	if (size > 2)
+		return -EINVAL;
+
+	if (sscanf(buf, "%u", &val) != 1)
+		return -EINVAL;
+
+	if (ts->gtp_is_suspend) {
+		dev_err(&ts->client->dev,
+			"Can't start fw upgrade. Device is in suspend state.");
+		return -EBUSY;
+	}
+
+	mutex_lock(&ts->input_dev->mutex);
+	if (val) {
+		disable_irq(ts->client->irq);
+		ts->force_update = true;
+		ret = gup_update_proc(NULL);
+		if (ret == FAIL)
+			dev_err(&ts->client->dev,
+			"Fail to force update GTP firmware.\n");
+		ts->force_update = false;
+		enable_irq(ts->client->irq);
+	}
+	mutex_unlock(&ts->input_dev->mutex);
+
+	return size;
+}
+
+static DEVICE_ATTR(force_fw_upgrade, (S_IRUGO | S_IWUSR | S_IWGRP),
+		NULL, gtp_force_fw_upgrade_store);
+
+static struct attribute *gtp_attrs[] = {
+	&dev_attr_force_fw_upgrade.attr,
+	NULL
+};
+
+static const struct attribute_group gtp_attr_grp = {
+	.attrs = gtp_attrs,
+};
+
 #if GTP_AUTO_UPDATE
 u8 gup_init_update_proc(struct goodix_ts_data *ts)
 {
     struct task_struct *thread = NULL;
+    int ret;
+    char upgrade_path[256] = { 0 };
+
+    #define STRING_BOOT_FTM_MODE "androidboot.mode=ffbm-01"
+    if (!strstr(saved_command_line, STRING_BOOT_FTM_MODE))
+	return 0;
 
     GTP_INFO("Ready to run update thread.");
+    ret = sysfs_create_group(&ts->client->dev.kobj, &gtp_attr_grp);
+    sprintf(upgrade_path, "/sys/bus/i2c/devices/%d-%04x/force_fw_upgrade",
+	    ts->client->adapter->nr, ts->client->addr);
+    proc_symlink("tp_fw_upgrade", NULL, upgrade_path);
 
 #if GTP_COMPATIBLE_MODE
     if (CHIP_TYPE_GT9F == ts->chip_type)
