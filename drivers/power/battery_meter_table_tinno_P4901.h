@@ -71,9 +71,9 @@ SCALE_R_PROFILE_STRUC battery_scale_r_profile[]=
 
 BATTERY_Q_COST_PROFILE_STRUC battery_q_cost_profile_t3[] =
 {
-{	0	,	4310	}, 
-{	50	,	4300	},
-{	100	,	4280	},
+{	0	,	4325	}, 
+{	50	,	4308	},
+{	100	,	4282	},
 {	150	,	4257	},
 {	200	,	4233	},
 {	250	,	4210	},
@@ -141,9 +141,9 @@ BATTERY_Q_COST_PROFILE_STRUC battery_q_cost_profile_t3[] =
 
 BATTERY_Q_COST_PROFILE_STRUC battery_q_cost_profile_t2[] =
 {
-{	0	,	4310	},
-{	50	,	4300	},
-{	100	,	4280	},
+{	0	,	4325	},
+{	50	,	4310	},
+{	100	,	4285	},
 {	150	,	4265	},
 {	200	,	4241	},
 {	250	,	4219	},
@@ -212,8 +212,8 @@ BATTERY_Q_COST_PROFILE_STRUC battery_q_cost_profile_t2[] =
 
 BATTERY_Q_COST_PROFILE_STRUC battery_q_cost_profile_t1[] =
 {
-{	0	,	4310	},
-{	50	,	4300	},
+{	0	,	4325	},
+{	50	,	4305	},
 {	100	,	4272	},
 {	150	,	4244	},
 {	200	,	4218	},
@@ -280,7 +280,7 @@ BATTERY_Q_COST_PROFILE_STRUC battery_q_cost_profile_t1[] =
  }; 	
 BATTERY_Q_COST_PROFILE_STRUC battery_q_cost_profile_t0[] =
 {
-{	0	,	4310	},
+{	0	,	4317	},
 {	50	,	4290	},
 {	100	,	4272	},
 {	150	,	4251	},
