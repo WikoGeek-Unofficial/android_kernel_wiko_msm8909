@@ -2645,11 +2645,11 @@ void update_fw_version(u16 ver)
 #if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903) || defined (CONFIG_TINNO_P4901TK)
 	if (5 == gtp_sensor_id)
     {
-		sprintf(des_buf, "TCL-P490x-GT615-%d", cfg_ver);
+		sprintf(des_buf, "DIJING-P490x-GT615-%d", cfg_ver);
 	}
     else
 	{
-		sprintf(des_buf, "DIJING-GT615-P490x-%x-%d",ver,cfg_ver);
+		sprintf(des_buf, "DIJING-P490x-GT615-%d", cfg_ver);
 	}
 #endif	
 	SET_DEVINFO_STR(TouchPanel,des_buf);
