@@ -71,7 +71,7 @@ SCALE_R_PROFILE_STRUC battery_scale_r_profile[]=
 
 BATTERY_Q_COST_PROFILE_STRUC battery_q_cost_profile_t3[] =
 {
-{	0	,	4325	}, 
+{	0	,	4330	}, 
 {	50	,	4308	},
 {	100	,	4282	},
 {	150	,	4257	},
@@ -141,7 +141,7 @@ BATTERY_Q_COST_PROFILE_STRUC battery_q_cost_profile_t3[] =
 
 BATTERY_Q_COST_PROFILE_STRUC battery_q_cost_profile_t2[] =
 {
-{	0	,	4325	},
+{	0	,	4330	},
 {	50	,	4310	},
 {	100	,	4285	},
 {	150	,	4265	},
