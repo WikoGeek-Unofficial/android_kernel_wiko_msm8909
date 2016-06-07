@@ -2617,7 +2617,31 @@ static struct i2c_driver mpu6881_i2c_driver = {
 	.id_table	= mpu6881_ids,
 };
 
-module_i2c_driver(mpu6881_i2c_driver);
+// WJ, DATE20160607, NOTE, BugFCCBM-768 wiko unify START
+#ifdef CONFIG_WIKO_UNIFY
+static int Gyroscope_sensor;
+core_param(Gyroscope_sensor, Gyroscope_sensor, int, 0444);
+#endif  /* CONFIG_WIKO_UNIFY */
+
+static int __init MPU6881_init(void)
+{
+#ifdef CONFIG_WIKO_UNIFY
+    if (!Gyroscope_sensor)
+    {
+        return 0;
+    }
+#endif  /* CONFIG_WIKO_UNIFY */
+	return i2c_add_driver(&mpu6881_i2c_driver);
+}
+
+static void __exit MPU6881_exit(void)
+{
+	i2c_del_driver(&mpu6881_i2c_driver);
+}
+
+module_init(MPU6881_init);
+module_exit(MPU6881_exit);
+// WJ, BugFCCBM-768 wiko unify END
 
 MODULE_DESCRIPTION("MPU6881 Tri-axis gyroscope driver");
 MODULE_LICENSE("GPL v2");
