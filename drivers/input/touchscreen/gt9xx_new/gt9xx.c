@@ -2645,7 +2645,16 @@ void update_fw_version(u16 ver)
 #if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903) || defined (CONFIG_TINNO_P4901TK)
 	if (5 == gtp_sensor_id)
     {
-		sprintf(des_buf, "DIJING-P490x-GT615-%d", cfg_ver);
+#if defined (CONFIG_TINNO_P4901)
+		sprintf(des_buf, "DIJING-P4901-GT615-%d", cfg_ver);
+#endif
+#if defined (CONFIG_TINNO_P4903)
+                sprintf(des_buf, "DIJING-P4903-GT615-%d", cfg_ver);
+#endif
+
+#if defined (CONFIG_TINNO_P4901TK)
+                sprintf(des_buf, "DIJING-P4901TK-GT615-%d", cfg_ver);
+#endif
 	}
     else
 	{
