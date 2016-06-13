@@ -3150,7 +3150,10 @@ static void mmc_clk_scaling(struct mmc_host *host, bool from_wq)
 		if (!from_wq)
 			queue_scale_down_work = true;
 		freq = mmc_get_min_frequency(host);
-		state = MMC_LOAD_LOW;
+		//state = MMC_LOAD_LOW;
+		 //WJ 20160608 modify for EMMC read slow
+               freq = mmc_get_max_frequency(host);
+               state = MMC_LOAD_HIGH;
 	}
 
 	if (state != host->clk_scaling.state) {
