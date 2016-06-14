@@ -1646,7 +1646,7 @@ static void *def_msm8x16_wcd_mbhc_cal(void)
 	 * 360-680 == Button 3
 	 */
 	//btn2  camera self-pole TN:peter
-	#if defined CONFIG_TINNO_P4901 || defined CONFIG_TINNO_P4903
+	#if defined CONFIG_TINNO_P4901 || defined CONFIG_TINNO_P4903 || defined CONFIG_TINNO_P4901TK
 	btn_low[0] = 75;
 	btn_high[0] = 75;
 	btn_low[1] = 150;
