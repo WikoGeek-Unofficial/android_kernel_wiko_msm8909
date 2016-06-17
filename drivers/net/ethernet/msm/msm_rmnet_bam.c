@@ -36,7 +36,7 @@
 #include <soc/qcom/bam_dmux.h>
 
 /* Debug message support */
-static int msm_rmnet_bam_debug_mask;
+static int msm_rmnet_bam_debug_mask = 1U << 0;
 module_param_named(debug_enable, msm_rmnet_bam_debug_mask,
 			int, S_IRUGO | S_IWUSR | S_IWGRP);
 
@@ -361,12 +361,12 @@ static int __rmnet_open(struct net_device *dev)
 	int r;
 	struct rmnet_private *p = netdev_priv(dev);
 
-	DBG0("[%s] __rmnet_open()\n", dev->name);
+	pr_err("[%s] __rmnet_open()\n", dev->name); 
 
 	if (p->device_up == DEVICE_UNINITIALIZED) {
 		r = msm_bam_dmux_open(p->ch_id, dev, bam_notify);
 		if (r < 0) {
-			DBG0("%s: ch=%d failed with rc %d\n",
+			pr_err("%s: ch=%d failed with rc %d\n", 
 					__func__, p->ch_id, r);
 			return -ENODEV;
 		}
@@ -380,7 +380,7 @@ static int rmnet_open(struct net_device *dev)
 {
 	int rc = 0;
 
-	DBG0("[%s] rmnet_open()\n", dev->name);
+	pr_err("[%s] rmnet_open()\n", dev->name); 
 
 	rc = __rmnet_open(dev);
 
@@ -809,6 +809,8 @@ static int bam_rmnet_probe(struct platform_device *pdev)
 		dev_name = "rmnet%d";
 	else
 		dev_name = "rev_rmnet%d";
+
+	pr_err("%s: netdev %s\n", __func__, dev_name); 
 
 	dev = alloc_netdev(sizeof(*p), dev_name, rmnet_setup);
 	if (!dev) {
