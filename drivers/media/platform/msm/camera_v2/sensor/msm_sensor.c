@@ -1951,8 +1951,10 @@ int msm_sensor_i2c_probe(struct i2c_client *client,
 			if(strcmp(client->name, "hi258_8909") == 0)
 			sprintf(sub_des_buf, "%s","hi258(2M|interp:null)");
 			else if(strcmp(client->name, "gc0310") == 0)
-			#ifdef TINNO_SUB_CAMERA_INTERPOLATION
+			#if defined(TINNO_SUB_CAMERA_INTERPOLATION)
 			sprintf(sub_des_buf, "%s","gc0310(0.3M|interp:2M)");
+			#elif ((defined(TINNO_TARGET_V3901))&&(defined(TINNO_SUB_CAMERA_INTERPOLATION_V3901_MCL_ZA))) 
+			sprintf(sub_des_buf, "%s","gc0310(0.3M|interp:5M)");
 			#else
 			sprintf(sub_des_buf, "%s","gc0310(0.3M|interp:null)");
 			#endif

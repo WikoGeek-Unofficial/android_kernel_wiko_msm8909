@@ -11,6 +11,11 @@ $(warning -wlj--PWD= $(PWD)-------RO_PROJECT=$(RO_PROJECT))
 ccflags-y += -DTINNO_MAIN_CAMERA_INTERPOLATION
 ccflags-y += -DTINNO_SUB_CAMERA_INTERPOLATION
 endif
+ifeq ($(strip $(RO_PROJECT)),mcl_za)
+$(warning -wlj--PWD= $(PWD)-------RO_PROJECT=$(RO_PROJECT))
+ccflags-y += -DTINNO_MAIN_CAMERA_INTERPOLATION_V3901_MCL_ZA
+ccflags-y += -DTINNO_SUB_CAMERA_INTERPOLATION_V3901_MCL_ZA
+endif
 endif
 ccflags-y += -Idrivers/media/platform/msm/camera_v2
 ccflags-y += -Idrivers/media/platform/msm/camera_v2/msm_vb2
