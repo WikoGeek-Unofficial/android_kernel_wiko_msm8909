@@ -105,6 +105,9 @@ static const char longname[] = "Gadget Android";
 #elif (defined(CONFIG_PROJECT_P4901_CAS_TR) || defined(CONFIG_PROJECT_P4901TK_CAS_TR))
 #define MANUFACTURER_STRING "Casper"
 #define PRODUCT_STRING "CASPER_VIA_E1c"
+#elif defined(CONFIG_PROJECT_P4903_QMB_PK)
+#define MANUFACTURER_STRING "QMobile"
+#define PRODUCT_STRING "LINQ Speed"
 #endif
 //zhisheng.tan, Date20160412, add for WIK_FR_OPEN_PLATFORM_S0003 PC display name EJABMA-17 end
 
@@ -3570,6 +3573,10 @@ static int android_bind(struct usb_composite_dev *cdev)
 	/* Default strings - should be updated by userspace */
 //zhisheng.tan, Date20160412, add for WIK_FR_OPEN_PLATFORM_S0003 PC display name EJABMA-17 start
 #ifdef CONFIG_PROJECT_P4901_WIK_FR
+	strlcpy(manufacturer_string, MANUFACTURER_STRING, sizeof(manufacturer_string) - 1);
+	strlcpy(product_string, PRODUCT_STRING, sizeof(product_string) - 1);
+	strlcpy(serial_string, "0123456789ABCDEF", sizeof(serial_string) - 1);
+#elif defined(CONFIG_PROJECT_P4903_QMB_PK)
 	strlcpy(manufacturer_string, MANUFACTURER_STRING, sizeof(manufacturer_string) - 1);
 	strlcpy(product_string, PRODUCT_STRING, sizeof(product_string) - 1);
 	strlcpy(serial_string, "0123456789ABCDEF", sizeof(serial_string) - 1);
