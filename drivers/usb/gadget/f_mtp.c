@@ -288,6 +288,12 @@ static struct usb_string mtp_string_defs[] = {
 	[INTERFACE_STRING_INDEX].s	= "CASPER_VIA_E1c",
 	{  },	/* end of list */
 };
+#elif defined(CONFIG_PROJECT_P4903_QMB_PK)
+static struct usb_string mtp_string_defs[] = {
+	/* Naming interface "MTP" so libmtp will recognize us */
+	[INTERFACE_STRING_INDEX].s	= "QMobile LINQ Speed",
+	{  },	/* end of list */
+};
 #else
 static struct usb_string mtp_string_defs[] = {
 	/* Naming interface "MTP" so libmtp will recognize us */
