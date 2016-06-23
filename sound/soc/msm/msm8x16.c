@@ -1619,11 +1619,13 @@ static void *def_msm8x16_wcd_mbhc_cal(void)
 	if (!msm8x16_wcd_cal) {
 		pr_err("%s: out of memory\n", __func__);
 		return NULL;
-	}
 
+	}
+//adjust headset reference volate TN:peter
 #define S(X, Y) ((WCD_MBHC_CAL_PLUG_TYPE_PTR(msm8x16_wcd_cal)->X) = (Y))
-	S(v_hs_max, 1600);
+		S(v_hs_max, 1700);
 #undef S
+
 #define S(X, Y) ((WCD_MBHC_CAL_BTN_DET_PTR(msm8x16_wcd_cal)->X) = (Y))
 	S(num_btn, WCD_MBHC_DEF_BUTTONS);
 #undef S
@@ -1649,23 +1651,23 @@ static void *def_msm8x16_wcd_mbhc_cal(void)
 	#if defined CONFIG_TINNO_P4901 || defined CONFIG_TINNO_P4903 || defined CONFIG_TINNO_P4901TK
 	btn_low[0] = 75;
 	btn_high[0] = 75;
-	btn_low[1] = 150;
-	btn_high[1] = 150;
-	btn_low[2] = 350;
-	btn_high[2] = 350;
-	btn_low[3] = 450;
-	btn_high[3] = 450;
+	btn_low[1] = 100;
+	btn_high[1] = 100;
+	btn_low[2] = 450;
+	btn_high[2] = 450;
+	btn_low[3] = 480;
+	btn_high[3] = 480;
 	btn_low[4] = 500;
 	btn_high[4] = 500;
 	#else
-	btn_low[0] = 150;
-	btn_high[0] = 150;
-	btn_low[1] = 200;
-	btn_high[1] = 200;
-	btn_low[2] = 350;
-	btn_high[2] = 350;
-	btn_low[3] = 450;
-	btn_high[3] = 450;
+	btn_low[0] = 50;
+	btn_high[0] = 50;
+	btn_low[1] = 150;
+	btn_high[1] = 150;
+	btn_low[2] = 450;
+	btn_high[2] = 450;
+	btn_low[3] = 480;
+	btn_high[3] = 480;
 	btn_low[4] = 500;
 	btn_high[4] = 500;
 	#endif 
