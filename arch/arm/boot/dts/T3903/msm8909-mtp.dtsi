@@ -460,8 +460,8 @@
 		liteon,highthr = <1040>;
 		liteon,lowthr = <1020>;
 		tinno,base_value = <0x3FF>;
-		tinno,threshold_high_offset = <0xA0>;
-		tinno,threshold_low_offset = <0x40>;
+		tinno,threshold_high_offset = <0x40>;
+		tinno,threshold_low_offset = <0x3A>;
 };/* Ambient light and proximity sensor */
 /*	stk@48 { 
 		compatible = "stk,stk3x1x";

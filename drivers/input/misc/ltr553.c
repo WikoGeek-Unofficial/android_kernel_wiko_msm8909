@@ -417,7 +417,7 @@ static uint8_t ps_movavg_data_counter;
 #define PROXIMITY_CALI_DEFAULT_DATA  (0x0A)
 #define PROXIMITY_CALI_DEFAULT_THRESHOLD_HIGH_OFFSET (0x60)
 #define PROXIMITY_CALI_DEFAULT_THRESHOLD_LOW_OFFSET (0x5A)
-#define PROXIMITY_CALI_DATA_PATH  "/persist/ps_cali_data"
+#define PROXIMITY_CALI_DATA_PATH  "/sensorcab/ps_cali_data"
 
 static int g_ps_cali_flag = 0;
 static int g_ps_base_value = 0;
@@ -1170,7 +1170,7 @@ static uint16_t read_als_adc_value_temp(struct ltr553_data *ltr553)
 
 #define LOW_TEMPERATURE
 #ifdef LOW_TEMPERATURE
-static int min_value_low_temperature=0x300;
+static int min_value_low_temperature=0x180;
 static int set_first_value_flag_low_temperature=0;
 static int reset_flag_low_temperature=0;
 
@@ -3196,6 +3196,8 @@ static void ltr553_ps_cali_set_threshold(void)
     	 LO_N_HI_LIMIT, ltr553);
 
 	pr_info("ltr553_ps_cali_set_threshold:value_high=%x,value_low=%x! \n",value_high,value_low);
+	pr_info("g_ps_base_value:value_high=%x,g_ps_default_threshold_high_offset=%x,g_ps_default_threshold_low_offset=%x \n",
+		g_ps_base_value,g_ps_default_threshold_high_offset,g_ps_default_threshold_low_offset);
 }
 
 
@@ -6754,7 +6756,7 @@ static void ltr553_read_ffbm_flag(void)
 static void low_temperature_value_all_reset(void)
 {
 
-	min_value_low_temperature=0x300;
+	min_value_low_temperature=0x180;
 	set_first_value_flag_low_temperature=0;
 	reset_flag_low_temperature=0;
 }
