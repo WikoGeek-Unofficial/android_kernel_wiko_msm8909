@@ -224,6 +224,7 @@ struct fts_ts_data {
 	struct pinctrl_state *pinctrl_state_suspend;
 	struct pinctrl_state *pinctrl_state_release;
 #endif
+	struct work_struct fb_notify_work;
 };
 
 #ifdef CONFIG_TOUCHSCREEN_FTS_PSENSOR

@@ -1235,6 +1235,14 @@ static int fts_ts_resume(struct device *dev)
 #endif
 
 #if defined(CONFIG_FB)
+
+static void fb_notify_resume_work(struct work_struct *work)
+{
+	struct fts_ts_data *ts =
+	    container_of(work, struct fts_ts_data, fb_notify_work);
+	fts_ts_resume(&ts->client->dev);
+}
+
 /*******************************************************************************
 *  Name: fb_notifier_callback
 *  Brief:
@@ -1250,13 +1258,20 @@ static int fb_notifier_callback(struct notifier_block *self,
 	struct fts_ts_data *fts_data =
 		container_of(self, struct fts_ts_data, fb_notif);
 
-	if (evdata && evdata->data && event == FB_EVENT_BLANK &&
+	//if (evdata && evdata->data && event == FB_EVENT_BLANK &&
+	if (evdata && evdata->data && event == FB_EARLY_EVENT_BLANK &&
 			fts_data && fts_data->client) {
 		blank = evdata->data;
-		if (*blank == FB_BLANK_UNBLANK)
-			fts_ts_resume(&fts_data->client->dev);
-		else if (*blank == FB_BLANK_POWERDOWN)
+		if (*blank == FB_BLANK_UNBLANK) {
+			//{ Modify by Zidong: defer resume to wq
+			schedule_work(&fts_data->fb_notify_work);
+			//}
+		} else if (*blank == FB_BLANK_POWERDOWN) {
+			//{ Modify by Zidong: defer resume to wq
+			flush_work(&fts_data->fb_notify_work);
+			//}
 			fts_ts_suspend(&fts_data->client->dev);
+		}
 	}
 
 	return 0;
@@ -2099,7 +2114,7 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 
 #if defined(CONFIG_FB)
 	data->fb_notif.notifier_call = fb_notifier_callback;
-
+	INIT_WORK(&data->fb_notify_work, fb_notify_resume_work);
 	err = fb_register_client(&data->fb_notif);
 
 	if (err)
