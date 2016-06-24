@@ -3213,7 +3213,8 @@ static int gtp_fb_notifier_callback(struct notifier_block *noti, unsigned long e
 	struct goodix_ts_data *ts = container_of(noti, struct goodix_ts_data, notifier);
 	int *blank;
 
-	if (ev_data && ev_data->data && event == FB_EVENT_BLANK && ts) {
+	//if (ev_data && ev_data->data && event == FB_EVENT_BLANK && ts) {
+	if (ev_data && ev_data->data && event == FB_EARLY_EVENT_BLANK && ts) {
 		blank = ev_data->data;
 		if (*blank == FB_BLANK_UNBLANK) {
 			GTP_DEBUG("Resume by fb notifier.");
