@@ -41,11 +41,6 @@
 #include <soc/qcom/scm.h>
 #include <linux/sched/rt.h>
 
-
-#include <linux/notifier.h>
-#include <linux/fb.h>
-
-
 #define CREATE_TRACE_POINTS
 #define TRACE_MSM_THERMAL
 #include <trace/trace_thermal.h>
@@ -3925,71 +3920,6 @@ static __refdata struct attribute *cc_attrs[] = {
 static __refdata struct attribute_group cc_attr_group = {
 	.attrs = cc_attrs,
 };
-
-void set_cpus_offlined(uint32_t mask)
-{
-	uint32_t val = 0;
-	uint32_t cpu;
-
-	mutex_lock(&core_control_mutex);
-
-	val = mask;
-
-	if (polling_enabled) {
-		pr_err("Ignoring request; polling thread is enabled.\n");
-		goto done_cc;
-	}
-
-	for_each_possible_cpu(cpu) {
-		if (!(msm_thermal_info.core_control_mask & BIT(cpu)))
-			continue;
-		cpus[cpu].user_offline= !!(val & BIT(cpu));
-		pr_debug("\"%s\"(PID:%i) requests %s CPU%d.\n", current->comm,
-			current->pid, (cpus[cpu].user_offline) ? "offline" :
-			"online", cpu);
-	}
-
-	if (hotplug_task)
-		complete(&hotplug_notify_complete);
-	else
-		pr_err("Hotplug task is not initialized\n");
-done_cc:
-	mutex_unlock(&core_control_mutex);
-}
-
-static int cpuhotplug_fb_notifier_callback(struct notifier_block *noti, unsigned long event, void *data)
-{
-	struct fb_event *ev_data = data;
-	int *blank;
-
-	if (ev_data && ev_data->data && event == FB_EVENT_BLANK ) {
-		blank = ev_data->data;
-		if (*blank == FB_BLANK_UNBLANK) {
-
-			set_cpus_offlined(0);
-			msm_thermal_set_frequency(0,UINT_MAX,true);
-		}
-		else if (*blank == FB_BLANK_POWERDOWN) {
-
-
-			set_cpus_offlined(0xc);
-			msm_thermal_set_frequency(0,998400,true);
-		}
-	}
-
-	return 0;
-}
-
-static int cpuhotplug_register_powermanger(void)
-{
-#if   defined(CONFIG_FB)
-	msm_thermal_info.notifier.notifier_call = cpuhotplug_fb_notifier_callback;
-	fb_register_client(&msm_thermal_info.notifier);
-#endif	
-	return 0;
-}
-
-
 static __init int msm_thermal_add_cc_nodes(void)
 {
 	struct kobject *module_kobj = NULL;
@@ -4008,8 +3938,6 @@ static __init int msm_thermal_add_cc_nodes(void)
 		ret = -ENOMEM;
 		goto done_cc_nodes;
 	}
-
-	cpuhotplug_register_powermanger();
 
 	ret = sysfs_create_group(cc_kobj, &cc_attr_group);
 	if (ret) {
