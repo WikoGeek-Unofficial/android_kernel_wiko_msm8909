@@ -71,9 +71,6 @@ struct msm_thermal_data {
 	int32_t vdd_mx_temp_degC;
 	int32_t vdd_mx_temp_hyst_degC;
 	int32_t therm_reset_temp_degC;
-#if defined(CONFIG_FB)
-	struct notifier_block notifier;
-#endif
 };
 
 enum sensor_id_type {
