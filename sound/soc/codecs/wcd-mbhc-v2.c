@@ -73,6 +73,12 @@ extern struct switch_dev wcd_mbhc_button_switch ;
 bool self_pole = false;
 //-- camera self-pole
 
+//++ extern pa TN:peter
+#if defined  CONFIG_TINNO_L5251 || defined CONFIG_TINNO_V3901 ||defined  CONFIG_TINNO_P4901 || defined  CONFIG_TINNO_P4901TK ||defined  CONFIG_TINNO_P4903
+#define  CONFIG_TINNO_SND_EXTERN_PA
+#endif
+//-- extern pa
+
 static void wcd_mbhc_jack_report(struct wcd_mbhc *mbhc,
 				struct snd_soc_jack *jack, int status, int mask)
 {
@@ -492,7 +498,7 @@ static bool wcd_mbhc_is_hph_pa_on(struct wcd_mbhc *mbhc)
 }
 
 //++ extern pa TN:peter
-#if defined  CONFIG_TINNO_L5251 || defined CONFIG_TINNO_V3901
+#ifdef  CONFIG_TINNO_SND_EXTERN_PA
 extern bool current_ext_spk_pa_state;
 #endif
 //-- extern pa
@@ -517,7 +523,7 @@ static void wcd_mbhc_set_and_turnoff_hph_padac(struct wcd_mbhc *mbhc)
 	
 
 //++ extern pa TN:peter
-#if defined  CONFIG_TINNO_L5251 || defined CONFIG_TINNO_V3901
+#ifdef  CONFIG_TINNO_SND_EXTERN_PA
 	printk("TINNO current_ext_spk_pa_state  %d\n",current_ext_spk_pa_state);
 	if(current_ext_spk_pa_state==0)
 #endif

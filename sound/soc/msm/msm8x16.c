@@ -72,10 +72,15 @@ enum btsco_rates {
 	RATE_8KHZ_ID,
 	RATE_16KHZ_ID,
 };
+//++ extern pa TN:peter
+#if defined  CONFIG_TINNO_L5251 || defined CONFIG_TINNO_V3901 ||defined  CONFIG_TINNO_P4901 || defined  CONFIG_TINNO_P4901TK ||defined  CONFIG_TINNO_P4903
+#define  CONFIG_TINNO_SND_EXTERN_PA
+#endif
 
-#if defined  CONFIG_TINNO_L5251 || defined CONFIG_TINNO_V3901
+#ifdef CONFIG_TINNO_SND_EXTERN_PA
 bool current_ext_spk_pa_state = false; //add for headset pa 
 #endif
+//-- extern pa
 
 
 static int msm_btsco_rate = BTSCO_RATE_8KHZ;
@@ -426,9 +431,10 @@ static int enable_spk_ext_pa(struct snd_soc_codec *codec, int enable)
 				__func__);
 		return -EINVAL;
 	}
-
+	//++ extern pa TN:peter
+	#ifdef CONFIG_TINNO_SND_EXTERN_PA
 	#if defined  CONFIG_TINNO_L5251 || defined CONFIG_TINNO_V3901
-	if(enable == 1)
+	if(enable == 1)//390x PA mode 2
 	{
 		current_ext_spk_pa_state = true;//add for headset pa 
 		gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, 1);
@@ -442,9 +448,14 @@ static int enable_spk_ext_pa(struct snd_soc_codec *codec, int enable)
 		current_ext_spk_pa_state = false;//add for headset pa 
 		gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, 0);
 	}
+	#else	//490x PA mode 1
+		gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, enable);
+		current_ext_spk_pa_state = enable;
+	#endif	
 	#else	
 		gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, enable);
 	#endif
+	//-- extern pa
 
 	return 0;
 }
