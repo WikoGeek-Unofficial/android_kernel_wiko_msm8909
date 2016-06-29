@@ -2577,7 +2577,7 @@ u8 gup_init_update_proc(struct goodix_ts_data *ts)
     char upgrade_path[256] = { 0 };
 
     #define STRING_BOOT_FTM_MODE "androidboot.mode=ffbm-01"
-    if (!strstr(saved_command_line, STRING_BOOT_FTM_MODE))
+    if (strstr(saved_command_line, STRING_BOOT_FTM_MODE))
 	return 0;
 
     GTP_INFO("Ready to run update thread.");
