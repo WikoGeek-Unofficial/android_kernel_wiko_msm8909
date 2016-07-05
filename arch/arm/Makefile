@@ -304,7 +304,11 @@ else
 ifeq ($(CONFIG_TINNO_P4901TK),y) 
 DTSSUBDIR := P4901TK
 else
+ifeq ($(CONFIG_TINNO_P4903JP),y) 
+DTSSUBDIR := P4903JP
+else
 DTSSUBDIR := qcom
+endif
 endif
 endif
 endif
