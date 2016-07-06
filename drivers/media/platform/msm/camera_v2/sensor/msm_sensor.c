@@ -685,6 +685,7 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 		((!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_cmk", sizeof("ov5670_cmk"))) ||
 		(!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_sunwin", sizeof("ov5670_sunwin"))) ||
 		(!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_sunwin_p4901", sizeof("ov5670_sunwin_p4901"))) ||
+		(!strncmp(s_ctrl->sensordata->sensor_name, "p4901_tk_sunwin_ov5670", sizeof("p4901_tk_sunwin_ov5670"))) ||
 		(!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_sunwin_p4903", sizeof("ov5670_sunwin_p4903")))))
 	{
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
@@ -770,6 +771,7 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 		}
 		else if((!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_sunwin", sizeof("ov5670_sunwin"))) ||
 			(!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_sunwin_p4901", sizeof("ov5670_sunwin_p4901"))) ||
+			(!strncmp(s_ctrl->sensordata->sensor_name, "p4901_tk_sunwin_ov5670", sizeof("p4901_tk_sunwin_ov5670"))) ||
 			(!strncmp(s_ctrl->sensordata->sensor_name, "ov5670_sunwin_p4903", sizeof("ov5670_sunwin_p4903"))))
 		{
 			if(mid == 6)
