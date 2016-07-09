@@ -4043,8 +4043,9 @@ static int parse_bms_dt_properties(struct qpnp_bms_chip *chip)
 			chip->spmi->dev.of_node, "qcom,batt-aging-comp");
 	chip->dt.cfg_use_reported_soc = of_property_read_bool(
 			chip->spmi->dev.of_node, "qcom,use-reported-soc");
-	tinno_pr_debug("v_cutoff_uv=%d, max_v=%d\n", chip->dt.cfg_v_cutoff_uv,
-					chip->dt.cfg_max_voltage_uv);
+	tinno_pr_debug("v_cutoff_uv=%d, max_v=%d, resume-soc=%d\n", chip->dt.cfg_v_cutoff_uv,
+					chip->dt.cfg_max_voltage_uv,
+					chip->dt.cfg_soc_resume_limit);
 	tinno_pr_debug("r_conn=%d shutdown_soc_valid_limit=%d low_temp_threshold=%d ibat_avg_samples=%d\n",
 					chip->dt.cfg_r_conn_mohm,
 			chip->dt.cfg_shutdown_soc_valid_limit,
