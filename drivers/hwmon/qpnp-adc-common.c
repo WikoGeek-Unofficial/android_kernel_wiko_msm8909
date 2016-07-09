@@ -274,7 +274,7 @@ static const struct qpnp_vadc_map_pt adcmap_btm_threshold[] = {
 		{	800	,	318	}
 		};
 	#else
-	   #if defined(CONFIG_TINNO_P4901)||defined(CONFIG_TINNO_P4903)||defined(CONFIG_TINNO_P4901TK)
+	   #if defined(CONFIG_TINNO_P4901)||defined(CONFIG_TINNO_P4903)||defined(CONFIG_TINNO_P4901TK)||defined(CONFIG_TINNO_P4903JP)
 	   		static const struct qpnp_vadc_map_pt adcmap_btm_threshold[] = {
 						{	-300	,	1618	},
 						{	-290	,	1609	},
