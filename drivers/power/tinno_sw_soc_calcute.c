@@ -1121,6 +1121,11 @@ int get_last_vm_soc(void)
 	return last_init_soc;
 }
 
+int get_last_vm_current(void)
+{
+    return current_temp;
+}
+
 #if defined(CONFIG_TINNO_P4901)||defined(CONFIG_TINNO_P4903)||defined(CONFIG_TINNO_P4901TK)||defined(CONFIG_TINNO_P4903JP)
 
 static bool is_battery_charging(void)
