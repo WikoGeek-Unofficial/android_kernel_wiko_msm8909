@@ -73,9 +73,15 @@ const char battery_type_str[2][50]={"Li-polymer Battery","Li-ion Battery"};
 int tinno_fake_temp=0;
 #endif
 
-#ifdef TINNO_HIGH_VOLTAGE_BATTERY
+
+extern int g_battery_temp;
+
+#define TINNO_SW_SOC_CALCUTE
+#if defined (TINNO_SW_SOC_CALCUTE)
 extern int get_last_vm_ocv(void);
-#endif
+extern int get_last_vm_soc(void);
+extern int get_last_vm_current(void);
+#endif  /* TINNO_SW_SOC_CALCUTE */
 
 #ifdef USE_GPIO_RED_LED
 int led_level=0;
@@ -812,22 +818,26 @@ static int qpnp_lbc_charger_enable(struct qpnp_lbc_chip *chip, int reason,
 	u8 reg_val;
 	int rc = 0;
 
-	tinno_pr_debug("reason=%d requested_enable=%d disabled_status=%d\n",
+	tinno_pr_debug("[BMS]reason=%d requested_enable=%d disabled_status=%d\n",
 					reason, enable, disabled);
 	if (enable)
 		disabled &= ~reason;
 	else
 		disabled |= reason;
 
-	if (!!chip->charger_disabled == !!disabled)
-		{
-			tinno_pr_debug("go to skip \n");
-			goto skip;
-		}
+    if (!!chip->charger_disabled == !!disabled)
+    {
+        tinno_pr_debug("go to skip \n");
+        goto skip;
+    }
 	reg_val = !!disabled ? CHG_FORCE_BATT_ON : CHG_ENABLE;
-	tinno_pr_debug("tinno_pr_debug=%u \n",chip->chgr_base);
+	tinno_pr_debug("chgr_base=%u \n",chip->chgr_base);
 	rc = qpnp_lbc_masked_write(chip, chip->chgr_base + CHG_CTRL_REG,
 				CHG_EN_MASK, reg_val);
+    #if defined (TINNO_SW_SOC_CALCUTE)
+    tinno_pr_debug("[BMS] enable=%x, ocv=%dmV, soc=%d, temp=%d, current=%dmA\n",
+        reg_val, get_last_vm_ocv(), get_last_vm_soc(), g_battery_temp, get_last_vm_current()/10);
+    #endif  /* TINNO_SW_SOC_CALCUTE */
 	if (rc) {
 		pr_err("Failed to %s charger rc=%d\n",
 				reg_val ? "enable" : "disable", rc);
@@ -930,7 +940,7 @@ static int qpnp_lbc_vddsafe_set(struct qpnp_lbc_chip *chip, int voltage)
 		return -EINVAL;
 	}
 	reg_val = (voltage - QPNP_LBC_VBAT_MIN_MV) / QPNP_LBC_VBAT_STEP_MV;
-	tinno_pr_debug("voltage=%d setting %02x\n", voltage, reg_val);
+	tinno_pr_debug("[CHG] voltage=%dmV setting %02x\n", voltage, reg_val);
 	rc = qpnp_lbc_write(chip, chip->chgr_base + CHG_VDD_SAFE_REG,
 				&reg_val, 1);
 	if (rc)
@@ -953,7 +963,7 @@ static int qpnp_lbc_vddmax_set(struct qpnp_lbc_chip *chip, int voltage)
 
 	spin_lock_irqsave(&chip->hw_access_lock, flags);
 	reg_val = (voltage - QPNP_LBC_VBAT_MIN_MV) / QPNP_LBC_VBAT_STEP_MV;
-	tinno_pr_debug("voltage=%d setting %02x\n", voltage, reg_val);
+	tinno_pr_debug("[CHG] voltage=%dmV setting %02x\n", voltage, reg_val);
 	rc = __qpnp_lbc_write(chip->spmi, chip->chgr_base + CHG_VDD_MAX_REG,
 				&reg_val, 1);
 	if (rc) {
@@ -1058,7 +1068,7 @@ static int qpnp_lbc_vinmin_set(struct qpnp_lbc_chip *chip, int voltage)
 	}
 
 	reg_val = (voltage - QPNP_LBC_VINMIN_MIN_MV) / QPNP_LBC_VINMIN_STEP_MV;
-	tinno_pr_debug("VIN_MIN=%d setting %02x\n", voltage, reg_val);
+	tinno_pr_debug("[CHG] VIN_MIN=%dmV setting %02x\n", voltage, reg_val);
 	rc = qpnp_lbc_write(chip, chip->chgr_base + CHG_VIN_MIN_REG,
 				&reg_val, 1);
 	if (rc)
@@ -1083,7 +1093,7 @@ static int qpnp_lbc_ibatsafe_set(struct qpnp_lbc_chip *chip, int safe_current)
 
 	reg_val = (safe_current - QPNP_LBC_IBATSAFE_MIN_MA)
 			/ QPNP_LBC_I_STEP_MA;
-	tinno_pr_debug("Ibate_safe=%d setting %02x\n", safe_current, reg_val);
+	tinno_pr_debug("[CHG] Ibate_safe=%dmA setting %02x\n", safe_current, reg_val);
 
 	tinno_pr_debug("chip->chgr_base=0x%x SAFE_REG 0x%x\n", chip->chgr_base, chip->chgr_base+ CHG_IBAT_SAFE_REG);
 	
@@ -1113,7 +1123,9 @@ static int qpnp_lbc_ibatmax_set(struct qpnp_lbc_chip *chip, int chg_current)
 						QPNP_LBC_IBATMAX_MAX);
 	reg_val = (chg_current - QPNP_LBC_IBATMAX_MIN) / QPNP_LBC_I_STEP_MA;
 
-	tinno_pr_debug("chip->chgr_base=0x%x CHG_IBAT_MAX_REG 0x%x\n", chip->chgr_base, chip->chgr_base+ CHG_IBAT_MAX_REG);
+	tinno_pr_debug("[CHG] chgr_base=0x%x CHG_IBAT_MAX_REG 0x%x, chg_current=%dmA\n", 
+        chip->chgr_base, chip->chgr_base+ CHG_IBAT_MAX_REG, chg_current);
+    
 	rc = qpnp_lbc_write(chip, chip->chgr_base + CHG_IBAT_MAX_REG,
 				&reg_val, 1);
 	if (rc)
@@ -1494,7 +1506,6 @@ static int get_prop_batt_temp(struct qpnp_lbc_chip *chip)
 #endif
 }
 
-extern int g_battery_temp;
 
 static int  check_temp_for_chg_current(int level)
 {

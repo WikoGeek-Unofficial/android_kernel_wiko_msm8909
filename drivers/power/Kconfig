@@ -437,6 +437,9 @@ config TINNO_DSIABLE_BATTERY_SOC_JUMP
 config TINNO_HIGH_VOLTAGE_BATTERY
 	bool "battery full voltage is 4.35v!"
 
+config TINNO_BATTERY_BACKUP_UI_SOC
+	bool "battery backup ui soc!"
+	
 config QPNP_CHARGER
 	tristate "QPNP Charger driver"
 	depends on SPMI
