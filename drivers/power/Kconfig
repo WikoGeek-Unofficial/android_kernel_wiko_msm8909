@@ -440,6 +440,9 @@ config TINNO_HIGH_VOLTAGE_BATTERY
 config TINNO_BATTERY_BACKUP_UI_SOC
 	bool "battery backup ui soc!"
 	
+config TINNO_JEITA_CTRL_BY_SW_ADC
+	bool "JEITA control by sw adc!"
+	
 config QPNP_CHARGER
 	tristate "QPNP Charger driver"
 	depends on SPMI

@@ -30,6 +30,9 @@
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
 
+// Jake.L, DATE20160715, NOTE, DATE20160715-01 LINE
+//#define CONFIG_TINNO_JEITA_CTRL_BY_SW_ADC
+
 int chgr_getled_gpio;
 extern char *saved_command_line;
 #define CHARGER_MODE_BOOT   "androidboot.mode=charger"
@@ -393,6 +396,10 @@ struct qpnp_lbc_chip {
 	u16				misc_base;
 	bool				bat_is_cool;
 	bool				bat_is_warm;
+	#if defined (CONFIG_TINNO_JEITA_CTRL_BY_SW_ADC)
+	bool				bat_is_cold;
+	bool				bat_is_hot;
+	#endif  /* CONFIG_TINNO_JEITA_CTRL_BY_SW_ADC */
 	bool				chg_done;
 	bool				usb_present;
 	bool				batt_present;
@@ -425,6 +432,11 @@ struct qpnp_lbc_chip {
 	int				cfg_bpd_detection;
 	int				cfg_warm_bat_decidegc;
 	int				cfg_cool_bat_decidegc;
+	#if defined (CONFIG_TINNO_JEITA_CTRL_BY_SW_ADC)
+	int				cfg_hot_bat_decidegc;
+	int				cfg_cold_bat_decidegc;
+	unsigned int			jeita_lvl_sel;
+	#endif  /* CONFIG_TINNO_JEITA_CTRL_BY_SW_ADC */
 	int				fake_battery_soc;
 	int				cfg_soc_resume_limit;
 	int				cfg_float_charge;
@@ -1013,6 +1025,11 @@ static int qpnp_lbc_set_appropriate_vddmax(struct qpnp_lbc_chip *chip)
 {
 	int rc;
 
+    #if defined (CONFIG_TINNO_JEITA_CTRL_BY_SW_ADC)
+    if (chip->bat_is_cold || chip->bat_is_hot)
+		rc = qpnp_lbc_vddmax_set(chip, chip->cfg_warm_bat_mv);
+    else
+    #endif  /* CONFIG_TINNO_JEITA_CTRL_BY_SW_ADC */
 	if (chip->bat_is_cool)
 		rc = qpnp_lbc_vddmax_set(chip, chip->cfg_cool_bat_mv);
 	else if (chip->bat_is_warm)
@@ -1348,11 +1365,19 @@ static int get_prop_batt_health(struct qpnp_lbc_chip *chip)
 		pr_err("Failed to read battery health rc=%d\n", rc);
 		return POWER_SUPPLY_HEALTH_UNKNOWN;
 	}
+    tinno_pr_debug("Jake.L reg_val=%x\n", reg_val);
 
-	if (BATT_TEMP_HOT_MASK & reg_val)
-		return POWER_SUPPLY_HEALTH_OVERHEAT;
-	if (!(BATT_TEMP_COLD_MASK & reg_val))
-		return POWER_SUPPLY_HEALTH_COLD;
+    #if defined (CONFIG_TINNO_JEITA_CTRL_BY_SW_ADC)
+    if (chip->bat_is_hot)
+        return POWER_SUPPLY_HEALTH_OVERHEAT;
+    if (chip->bat_is_cold)
+        return POWER_SUPPLY_HEALTH_COLD;
+    #else
+    if (BATT_TEMP_HOT_MASK & reg_val)
+        return POWER_SUPPLY_HEALTH_OVERHEAT;
+    if (!(BATT_TEMP_COLD_MASK & reg_val))
+        return POWER_SUPPLY_HEALTH_COLD;
+    #endif  /* CONFIG_TINNO_JEITA_CTRL_BY_SW_ADC */
 	if (chip->bat_is_cool)
 		return POWER_SUPPLY_HEALTH_COOL;
 	if (chip->bat_is_warm)
@@ -1507,6 +1532,64 @@ static int get_prop_batt_temp(struct qpnp_lbc_chip *chip)
 }
 
 
+#if defined (CONFIG_TINNO_JEITA_CTRL_BY_SW_ADC)
+static void qpnp_lbc_set_appropriate_current(struct qpnp_lbc_chip *chip)
+{
+    unsigned int chg_current = chip->usb_psy_ma;
+    static int last_chg_flag=1;
+    int current_chg_flag=1;
+    
+    #if defined (CONFIG_TINNO_JEITA_CTRL_BY_SW_ADC)
+    if (chip->bat_is_cold || chip->bat_is_hot)
+        chg_current = 0;    // disable charging
+    else if (chip->bat_is_cool && chip->cfg_cool_bat_chg_ma)
+        chg_current = min(chg_current, chip->cfg_cool_bat_chg_ma);
+    else if (chip->bat_is_warm && chip->cfg_warm_bat_chg_ma)
+        chg_current = min(chg_current, chip->cfg_warm_bat_chg_ma);
+    #else
+	if (chip->bat_is_cool && chip->cfg_cool_bat_chg_ma)
+		chg_current = min(chg_current, chip->cfg_cool_bat_chg_ma);
+	if (chip->bat_is_warm && chip->cfg_warm_bat_chg_ma)
+		chg_current = min(chg_current, chip->cfg_warm_bat_chg_ma);
+    #endif  /* CONFIG_TINNO_JEITA_CTRL_BY_SW_ADC */
+	
+	chip->therm_lvl_sel = chip->jeita_lvl_sel;
+
+	if (chip->therm_lvl_sel >= 0 && chip->thermal_mitigation)
+	{
+		chg_current = min(chg_current, chip->thermal_mitigation[chip->therm_lvl_sel]);
+        tinno_pr_debug("chip->thermal_mitigation[chip->therm_lvl_sel] :%d \n",chip->thermal_mitigation[chip->therm_lvl_sel]);
+		tinno_pr_debug("set current thermal-mitigation :%d:%d:%d:%d \n",
+            chip->thermal_mitigation[0],chip->thermal_mitigation[1],chip->thermal_mitigation[2],chip->thermal_mitigation[3]);		   
+	}
+
+	if(chip->cfg_safe_current!=0)
+	{
+		if(chg_current>chip->cfg_safe_current)
+		{
+			chg_current=chip->cfg_safe_current;
+		}
+	}
+    
+	tinno_pr_debug("setting charger current %d mA therm_lvl_sel:%d \n", chg_current ,chip->therm_lvl_sel);
+	qpnp_lbc_ibatmax_set(chip, chg_current);
+    
+	if(chip->therm_lvl_sel >= 3)
+	{	
+		current_chg_flag=0;
+		qpnp_lbc_charger_enable(chip, THERMAL, 0);
+	}else{
+		current_chg_flag=1;
+		qpnp_lbc_charger_enable(chip, THERMAL, 1);
+	}
+	if(current_chg_flag!=last_chg_flag)
+	{
+		power_supply_changed(&chip->batt_psy);
+	}
+	last_chg_flag=current_chg_flag;
+}
+
+#else
 static int  check_temp_for_chg_current(int level)
 {
 	int current_level;
@@ -1550,10 +1633,19 @@ static void qpnp_lbc_set_appropriate_current(struct qpnp_lbc_chip *chip)
 #ifdef TINNO_HIGH_VOLTAGE_BATTERY	
 	int battery_voltage_temp=0;
 #endif
+    #if defined (CONFIG_TINNO_JEITA_CTRL_BY_SW_ADC)
+    if (chip->bat_is_cold || chip->bat_is_hot)
+        chg_current = 0;    // disable charging
+    else if (chip->bat_is_cool && chip->cfg_cool_bat_chg_ma)
+        chg_current = min(chg_current, chip->cfg_cool_bat_chg_ma);
+    else if (chip->bat_is_warm && chip->cfg_warm_bat_chg_ma)
+        chg_current = min(chg_current, chip->cfg_warm_bat_chg_ma);
+    #else
 	if (chip->bat_is_cool && chip->cfg_cool_bat_chg_ma)
 		chg_current = min(chg_current, chip->cfg_cool_bat_chg_ma);
 	if (chip->bat_is_warm && chip->cfg_warm_bat_chg_ma)
 		chg_current = min(chg_current, chip->cfg_warm_bat_chg_ma);
+    #endif  /* CONFIG_TINNO_JEITA_CTRL_BY_SW_ADC */
 	
 	chip->therm_lvl_sel=check_temp_for_chg_current(chip->therm_lvl_sel);
 
@@ -1597,6 +1689,7 @@ static void qpnp_lbc_set_appropriate_current(struct qpnp_lbc_chip *chip)
 	}
 	last_chg_flag=current_chg_flag;
 }
+#endif  /* CONFIG_TINNO_JEITA_CTRL_BY_SW_ADC */
 
 
 
@@ -1749,6 +1842,7 @@ static int qpnp_lbc_configure_jeita(struct qpnp_lbc_chip *chip,
 		pr_err("Bad temperature request %d\n", temp_degc);
 		return -EINVAL;
 	}
+    tinno_pr_debug("Jake.L psp=%x, temp_degc=%d\n", psp - POWER_SUPPLY_PROP_COOL_TEMP, temp_degc);
 
 	mutex_lock(&chip->jeita_configure_lock);
 	switch (psp) {
@@ -2166,6 +2260,145 @@ static int qpnp_lbc_parallel_get_property(struct power_supply *psy,
 }
 
 
+#if defined (CONFIG_TINNO_JEITA_CTRL_BY_SW_ADC)
+static void qpnp_lbc_jeita_adc_notification(enum qpnp_tm_state state, void *ctx)
+{
+    struct qpnp_lbc_chip *chip = ctx;
+    bool bat_warm = 0, bat_cool = 0, bat_hot = 0, bat_cold = 0; 
+    int temp;
+    unsigned long flags;
+
+    if (state >= ADC_TM_STATE_NUM) {
+        pr_err("invalid notification %d\n", state);
+        return;
+    }
+
+    temp = get_prop_batt_temp(chip);
+
+    tinno_pr_debug("temp = %d state = %s\n", 
+        temp,
+        state == ADC_TM_WARM_STATE ? "warm" : "cool");
+
+    if (state == ADC_TM_WARM_STATE) {
+        if (temp >= chip->cfg_hot_bat_decidegc){    // Hot
+            /* Warm to hot */
+            bat_hot = true; 
+            bat_warm = false;
+            bat_cool = false;
+            bat_cold = false;
+            
+            chip->adc_param.low_temp = chip->cfg_hot_bat_decidegc - HYSTERISIS_DECIDEGC;
+            chip->adc_param.state_request = ADC_TM_COOL_THR_ENABLE;
+        } else if (temp >= chip->cfg_warm_bat_decidegc) {   // Warm
+            /* Normal to warm */
+            bat_hot = false;
+            bat_warm = true;    
+            bat_cool = false;
+            bat_cold = false;
+            
+            chip->adc_param.high_temp = chip->cfg_hot_bat_decidegc;
+            chip->adc_param.low_temp = chip->cfg_warm_bat_decidegc - HYSTERISIS_DECIDEGC;
+            chip->adc_param.state_request = ADC_TM_HIGH_LOW_THR_ENABLE;
+        } else if (temp >= chip->cfg_cool_bat_decidegc + HYSTERISIS_DECIDEGC) { // Normal
+            /* Cool to normal */
+            bat_hot = false;
+            bat_warm = false;
+            bat_cool = false;
+            bat_cold = false;
+
+            chip->adc_param.high_temp = chip->cfg_warm_bat_decidegc;
+            chip->adc_param.low_temp = chip->cfg_cool_bat_decidegc;
+            chip->adc_param.state_request = ADC_TM_HIGH_LOW_THR_ENABLE;
+        } else if (temp >= chip->cfg_cold_bat_decidegc + HYSTERISIS_DECIDEGC) { // Cool
+            /* Cold to cool */
+            bat_hot = false;
+            bat_warm = false;
+            bat_cool = true;    
+            bat_cold = false;
+            
+            chip->adc_param.high_temp = chip->cfg_cool_bat_decidegc + HYSTERISIS_DECIDEGC;
+            chip->adc_param.low_temp = chip->cfg_cold_bat_decidegc;
+            chip->adc_param.state_request = ADC_TM_HIGH_LOW_THR_ENABLE;
+        }
+    } else {
+        if (temp <= chip->cfg_cold_bat_decidegc) {  // Cold
+            /* Cool to cold */
+            bat_hot = false;
+            bat_warm = false;
+            bat_cool = false;    
+            bat_cold = true;
+            
+            chip->adc_param.high_temp = chip->cfg_cold_bat_decidegc + HYSTERISIS_DECIDEGC;
+            chip->adc_param.state_request = ADC_TM_WARM_THR_ENABLE;
+        }else if (temp <= chip->cfg_cool_bat_decidegc){ // Cool
+            /* Normal to cool */
+            bat_hot = false;
+            bat_warm = false;
+            bat_cool = true;    
+            bat_cold = false;
+
+            chip->adc_param.high_temp = chip->cfg_cool_bat_decidegc + HYSTERISIS_DECIDEGC;
+            chip->adc_param.low_temp = chip->cfg_cold_bat_decidegc;
+            chip->adc_param.state_request = ADC_TM_HIGH_LOW_THR_ENABLE;
+        }else if (temp <= chip->cfg_warm_bat_decidegc - HYSTERISIS_DECIDEGC){ // Normal
+            /* Warm to normal */
+            bat_hot = false;
+            bat_warm = false;
+            bat_cool = false;    
+            bat_cold = false;
+
+            chip->adc_param.high_temp = chip->cfg_warm_bat_decidegc;
+            chip->adc_param.low_temp = chip->cfg_cool_bat_decidegc;
+            chip->adc_param.state_request = ADC_TM_HIGH_LOW_THR_ENABLE;
+        }else if (temp <= chip->cfg_hot_bat_decidegc - HYSTERISIS_DECIDEGC){ // Warm
+            /* Hot to warm */
+            bat_hot = false;
+            bat_warm = true;
+            bat_cool = false;    
+            bat_cold = false;
+
+            chip->adc_param.high_temp = chip->cfg_hot_bat_decidegc;
+            chip->adc_param.low_temp = chip->cfg_warm_bat_decidegc - HYSTERISIS_DECIDEGC;
+            chip->adc_param.state_request = ADC_TM_HIGH_LOW_THR_ENABLE;
+        }
+    }
+
+    if (bat_cold || bat_hot)
+    {
+        chip->jeita_lvl_sel = 3;
+    }
+    else if (bat_cool || bat_warm)
+    {
+        chip->jeita_lvl_sel = 1;
+    }
+    else
+    {
+        chip->jeita_lvl_sel = 0;
+    }
+    
+    if (chip->bat_is_cold ^ bat_cold 
+        || chip->bat_is_cool ^ bat_cool
+        || chip->bat_is_warm ^ bat_warm
+        || chip->bat_is_hot ^ bat_hot) {
+        spin_lock_irqsave(&chip->ibat_change_lock, flags);
+        chip->bat_is_cold = bat_cold;
+        chip->bat_is_cool = bat_cool;
+        chip->bat_is_warm = bat_warm;
+        chip->bat_is_hot = bat_hot;
+        
+        qpnp_lbc_set_appropriate_vddmax(chip);
+        qpnp_lbc_set_appropriate_current(chip);
+        spin_unlock_irqrestore(&chip->ibat_change_lock, flags);
+    }
+
+    tinno_pr_debug("hot=%d, warm=%d, cool=%d, cold=%d, low=%d deciDegC, high=%d deciDegC\n",
+        chip->bat_is_hot, chip->bat_is_warm, chip->bat_is_cool, chip->bat_is_cold,
+        chip->adc_param.low_temp, chip->adc_param.high_temp);
+
+    if (qpnp_adc_tm_channel_measure(chip->adc_tm_dev, &chip->adc_param))
+        pr_err("request ADC error\n");
+}
+#else
 static void qpnp_lbc_jeita_adc_notification(enum qpnp_tm_state state, void *ctx)
 {
 	struct qpnp_lbc_chip *chip = ctx;
@@ -2247,6 +2480,7 @@ static void qpnp_lbc_jeita_adc_notification(enum qpnp_tm_state state, void *ctx)
 	if (qpnp_adc_tm_channel_measure(chip->adc_tm_dev, &chip->adc_param))
 		pr_err("request ADC error\n");
 }
+#endif  /* CONFIG_TINNO_JEITA_CTRL_BY_SW_ADC */
 
 #define IBAT_TERM_EN_MASK		BIT(3)
 static int qpnp_lbc_chg_init(struct qpnp_lbc_chip *chip)
@@ -2567,6 +2801,10 @@ static int qpnp_charger_read_dt_props(struct qpnp_lbc_chip *chip)
 	OF_PROP_READ(chip, cfg_tchg_mins, "tchg-mins", rc, 1);
 	OF_PROP_READ(chip, cfg_warm_bat_decidegc, "warm-bat-decidegc", rc, 1);
 	OF_PROP_READ(chip, cfg_cool_bat_decidegc, "cool-bat-decidegc", rc, 1);
+	#if defined (CONFIG_TINNO_JEITA_CTRL_BY_SW_ADC)
+	OF_PROP_READ(chip, cfg_hot_bat_decidegc, "hot-bat-decidegc", rc, 1);
+	OF_PROP_READ(chip, cfg_cold_bat_decidegc, "cold-bat-decidegc", rc, 1);
+	#endif  /* CONFIG_TINNO_JEITA_CTRL_BY_SW_ADC */
 	OF_PROP_READ(chip, cfg_hot_batt_p, "batt-hot-percentage", rc, 1);
 	OF_PROP_READ(chip, cfg_cold_batt_p, "batt-cold-percentage", rc, 1);
 	OF_PROP_READ(chip, cfg_batt_weak_voltage_uv, "vbatweak-uv", rc, 1);
@@ -2706,11 +2944,19 @@ static int qpnp_charger_read_dt_props(struct qpnp_lbc_chip *chip)
 			chip->cfg_safe_voltage_mv,
 			chip->cfg_min_voltage_mv,
 			chip->cfg_safe_current);
+	#if defined (CONFIG_TINNO_JEITA_CTRL_BY_SW_ADC)
+	tinno_pr_debug("warm-bat-decidegc=%d, cool-bat-decidegc=%d, hot-bat-decidegc=%d, cold-bat-decidegc=%d\n",
+			chip->cfg_warm_bat_decidegc,
+			chip->cfg_cool_bat_decidegc,
+			chip->cfg_hot_bat_decidegc,
+			chip->cfg_cold_bat_decidegc);
+    #else
 	tinno_pr_debug("warm-bat-decidegc=%d, cool-bat-decidegc=%d, batt-hot-percentage=%d, batt-cold-percentage=%d\n",
 			chip->cfg_warm_bat_decidegc,
 			chip->cfg_cool_bat_decidegc,
 			chip->cfg_hot_batt_p,
 			chip->cfg_cold_batt_p);
+	#endif  /* CONFIG_TINNO_JEITA_CTRL_BY_SW_ADC */
 	tinno_pr_debug("tchg-mins=%d, vbatweak-uv=%d, resume-soc=%d\n",
 			chip->cfg_tchg_mins,
 			chip->cfg_batt_weak_voltage_uv,
