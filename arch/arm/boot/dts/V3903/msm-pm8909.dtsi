@@ -214,6 +214,9 @@
 			qcom,warm-bat-mv = <4100>;
 			qcom,ibatmax-warm-ma = <500>;
 			qcom,ibatmax-cool-ma = <500>;
+			qcom,cold-bat-decidegc = <0>;   // Jake.L add for hot/cold monitor by SW ADC
+			qcom,hot-bat-decidegc = <600>;  // Jake.L add for hot/cold monitor by SW ADC
+			qcom,btc-disabled;  // Jake.L add for hot/cold monitor by SW ADC
 			qcom,batt-hot-percentage = <25>;
 			qcom,batt-cold-percentage = <80>;
 			qcom,tchg-mins = <232>;

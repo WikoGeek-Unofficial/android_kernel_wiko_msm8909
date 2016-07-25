@@ -1590,39 +1590,35 @@ static void qpnp_lbc_set_appropriate_current(struct qpnp_lbc_chip *chip)
 }
 
 #else
-static int  check_temp_for_chg_current(int level)
+static int  check_temp_for_chg_current(int level, int temp)
 {
-	int current_level;
-	current_level=level;
-	tinno_pr_debug("check_temp_for_chg_current :current_level=%d ,g_battery_temp=%d\n",current_level,g_battery_temp);
-	   
-	if(g_battery_temp<=0)
-	{
-		current_level=3;
-	}
+    int current_level;
+    current_level=level;
+    tinno_pr_debug("check_temp_for_chg_current: current_level=%d, temp=%d\n", current_level, temp);
 
-	if((g_battery_temp<10)&&(g_battery_temp>0))
-	{
-		current_level=2;
-	}
+    if(temp <= 0)
+    {
+        current_level = 3;
+    }
+    else if((temp > 0) && (temp < 10))
+    {
+        current_level = 2;
+    }
+    else if((temp >= 10) && (temp <= 50))
+    {
+        current_level = 0;
+    }
+    else if((temp > 50) && (temp < 60))
+    {
+        current_level = 2;
+    }
+    else if (temp >= 60)
+    {
+        current_level = 3;
+    }
 
-	if((g_battery_temp>=10)&&(g_battery_temp<=50))
-	{
-		current_level=0;
-	}
-
-	if((g_battery_temp>50)&&(g_battery_temp<60))
-	{
-		current_level=2;
-	}
-	if (g_battery_temp>=60)
-	{
-		current_level=3;
-	}
-
-	tinno_pr_debug(" current_level=%d \n ",current_level);
-	return current_level;
-	   
+    tinno_pr_debug("current_level=%d\n", current_level);
+    return current_level;
 }
 
 static void qpnp_lbc_set_appropriate_current(struct qpnp_lbc_chip *chip)
@@ -1647,7 +1643,7 @@ static void qpnp_lbc_set_appropriate_current(struct qpnp_lbc_chip *chip)
 		chg_current = min(chg_current, chip->cfg_warm_bat_chg_ma);
     #endif  /* CONFIG_TINNO_JEITA_CTRL_BY_SW_ADC */
 	
-	chip->therm_lvl_sel=check_temp_for_chg_current(chip->therm_lvl_sel);
+	chip->therm_lvl_sel=check_temp_for_chg_current(chip->therm_lvl_sel, get_prop_batt_temp(chip)/10);
 
 #ifdef TINNO_HIGH_VOLTAGE_BATTERY
 		battery_voltage_temp=get_last_vm_ocv()/1000;
