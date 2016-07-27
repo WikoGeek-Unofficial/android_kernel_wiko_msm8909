@@ -433,7 +433,7 @@ static int enable_spk_ext_pa(struct snd_soc_codec *codec, int enable)
 	}
 	//++ extern pa TN:peter
 	#ifdef CONFIG_TINNO_SND_EXTERN_PA
-	#if defined  CONFIG_TINNO_L5251 || defined CONFIG_TINNO_V3901
+	#if 1//defined  CONFIG_TINNO_L5251 || defined CONFIG_TINNO_V3901
 	if(enable == 1)//390x PA mode 2
 	{
 		current_ext_spk_pa_state = true;//add for headset pa 
