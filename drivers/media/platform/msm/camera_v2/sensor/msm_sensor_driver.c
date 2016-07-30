@@ -964,6 +964,10 @@ int32_t msm_sensor_driver_probe(void *setting,
 		    sprintf(main_des_buf, "imx219_0x11_mipiraw_sunny");
 		else if(strcmp(slave_info->sensor_name, "p4901_tk_sunny_imx219") == 0)
 		    sprintf(main_des_buf, "imx219_tk_0x01_mipiraw_sunny");
+		else if(strcmp(slave_info->sensor_name, "p4901_tk_sunny_imx219_0x11") == 0)
+		    sprintf(main_des_buf, "imx219_tk_0x11_mipiraw_sunny");
+		else if(strcmp(slave_info->sensor_name, "p4903_sunny_imx219") == 0)
+		    sprintf(main_des_buf, "p4903_sunny_0x01_imx219");
 		else if(strcmp(slave_info->sensor_name, "hi842") == 0)
 		    sprintf(main_des_buf, "hi842mipiraw_sunwin");
 		else
