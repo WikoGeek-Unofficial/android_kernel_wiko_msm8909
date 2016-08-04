@@ -450,6 +450,10 @@
 			"sensor_gpio_vana";
 		qcom,cam-power-seq-cfg-val = <24000000 1 1 1>;
 		qcom,cam-power-seq-delay = <5 5 5 5>;
+		clocks = <&clock_gcc clk_mclk0_clk_src>,
+				<&clock_gcc clk_gcc_camss_mclk0_clk>;
+		clock-names = "cam_src_clk", "cam_clk";
+	};
   //IMX219
 	eeprom5: qcom,eeprom@21{
 		cell-index = <5>;
