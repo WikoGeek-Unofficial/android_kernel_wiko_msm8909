@@ -74,7 +74,7 @@ bool self_pole = false;
 //-- camera self-pole
 
 //++ extern pa TN:peter
-#if defined  CONFIG_TINNO_L5251 || defined CONFIG_TINNO_V3901 ||defined  CONFIG_TINNO_P4901 || defined  CONFIG_TINNO_P4901TK ||defined  CONFIG_TINNO_P4903
+#if defined  CONFIG_TINNO_L5251 || defined CONFIG_TINNO_V3901 ||defined  CONFIG_TINNO_P4901 || defined  CONFIG_TINNO_P4901TK ||defined  CONFIG_TINNO_P4903 ||defined  CONFIG_TINNO_P4903JP
 #define  CONFIG_TINNO_SND_EXTERN_PA
 #endif
 //-- extern pa

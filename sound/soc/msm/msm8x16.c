@@ -73,7 +73,7 @@ enum btsco_rates {
 	RATE_16KHZ_ID,
 };
 //++ extern pa TN:peter
-#if defined  CONFIG_TINNO_L5251 || defined CONFIG_TINNO_V3901 ||defined  CONFIG_TINNO_P4901 || defined  CONFIG_TINNO_P4901TK ||defined  CONFIG_TINNO_P4903
+#if defined  CONFIG_TINNO_L5251 || defined CONFIG_TINNO_V3901 ||defined  CONFIG_TINNO_P4901 || defined  CONFIG_TINNO_P4901TK ||defined  CONFIG_TINNO_P4903 ||defined  CONFIG_TINNO_P4903JP
 #define  CONFIG_TINNO_SND_EXTERN_PA
 #endif
 
@@ -1659,7 +1659,7 @@ static void *def_msm8x16_wcd_mbhc_cal(void)
 	 * 360-680 == Button 3
 	 */
 	//btn2  camera self-pole TN:peter
-	#if defined CONFIG_TINNO_P4901 || defined CONFIG_TINNO_P4903 || defined CONFIG_TINNO_P4901TK
+	#if defined CONFIG_TINNO_P4901 || defined CONFIG_TINNO_P4903 || defined CONFIG_TINNO_P4901TK ||defined  CONFIG_TINNO_P4903JP
 	btn_low[0] = 75;
 	btn_high[0] = 75;
 	btn_low[1] = 100;

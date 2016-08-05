@@ -542,7 +542,7 @@ static int8_t _ltr553_set_bit(struct i2c_client *client, uint8_t set,
 
 #if 1
 #if defined (CONFIG_TINNO_SMART_ABC)
-#if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4901TK)
+#if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4901TK) || defined (CONFIG_TINNO_P4903JP)
 static uint16_t g_lux_sensor_map[11] = 
 {4,10,40,145,300,565,995,1350,1930,10400,20950};//4901
 #else
