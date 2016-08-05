@@ -2892,7 +2892,10 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
     if (ret < 0)
     {
         //zgm add
-#if defined (CONFIG_TINNO_P4901) || defined (CONFIG_TINNO_P4903) || defined (CONFIG_TINNO_P4901TK)		
+#if defined (CONFIG_TINNO_P4901) \
+	|| defined (CONFIG_TINNO_P4903) \
+	|| defined (CONFIG_TINNO_P4901TK) \
+	|| defined (CONFIG_TINNO_P4903JP)
         GTP_GPIO_FREE(gtp_rst_gpio);
         GTP_GPIO_FREE(gtp_int_gpio);
 #endif		

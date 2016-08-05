@@ -128,6 +128,10 @@
 #define FTS_DBG(fmt, args...) 				do{}while(0)
 #endif
 
+#ifdef CONFIG_TINNO_P4903JP
+#define CONFIG_TINNO_P4903
+#endif
+
 
 /*******************************************************************************
 * Private enumerations, structures and unions using typedef
