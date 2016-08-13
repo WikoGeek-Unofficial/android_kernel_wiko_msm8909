@@ -1643,7 +1643,7 @@ static void qpnp_lbc_set_appropriate_current(struct qpnp_lbc_chip *chip)
 		chg_current = min(chg_current, chip->cfg_warm_bat_chg_ma);
     #endif  /* CONFIG_TINNO_JEITA_CTRL_BY_SW_ADC */
 	
-	chip->therm_lvl_sel=check_temp_for_chg_current(chip->therm_lvl_sel, get_prop_batt_temp(chip)/10);
+	chip->therm_lvl_sel=check_temp_for_chg_current(chip->therm_lvl_sel, g_battery_temp/*get_prop_batt_temp(chip)/10*/);
 
 #ifdef TINNO_HIGH_VOLTAGE_BATTERY
 		battery_voltage_temp=get_last_vm_ocv()/1000;
