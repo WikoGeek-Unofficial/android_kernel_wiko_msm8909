@@ -2333,48 +2333,64 @@ static int elan_ts_suspend(struct i2c_client *client, pm_message_t mesg)
 
 static int elan_ts_resume(struct i2c_client *client)
 {
-    struct elan_ts_data *ts = private_ts;
-    int rc = 0;
-  // char buf[8]; 
-    elan_info("[elan] %s: enter\n", __func__);
-  //fix bug:EBBAL-2538
-	if(down_flag)
-	{
+	struct elan_ts_data *ts = private_ts;
+	int rc = 0;
+	// char buf[8];
+
+	elan_info("[elan] %s: enter\n", __func__);
+	//fix bug:EBBAL-2538
+	if(down_flag) {
 		printk("elan_ts_resume up point!\n");
-		elan_ts_touch_up(ts,0,0,0);
+		elan_ts_touch_up(ts, 0, 0, 0);
 		input_sync(ts->input_dev);
 	}
-//end
-  mutex_lock(&ts_pm_lock);
-           if(suspend_flag==1)
-           {
-           		suspend_flag=0;
-		    if(ts->power_lock==0){
-		         elan_info("[elan] reset gpio to resum tp\n");
-			  set_int_pin_state(1); 
-		         elan_reset();
-			  elan_switch_irq(1);		
-#if 0 
-		//add by alik		
-			msleep(150); 
-			rc = i2c_master_recv(ts->client, buf, 8); 
-			if(8 != rc){ 
-			elan_info("[elan error] elan_ts_resume hello error\n"); 
-			} 
-			else{ 
-			elan_info("elan resum %02x %02x %02x %02x\n", buf[0], buf[1], buf[2], buf[3]);
-			} 
-		//add end	
-		   #endif   
-		    }
+	//end
+	mutex_lock(&ts_pm_lock);
+	if (suspend_flag == 1) {
+		suspend_flag = 0;
+		if(ts->power_lock == 0) {
+			uint8_t cmd[] = {CMD_W_PKT, 0x58, 0x00, 0x01};
+			uint8_t getcmd[] = {CMD_R_PKT, 0x50, 0x00, 0x01};
+			uint8_t recvpwr[4] = {0};
+			int rc = 0;
+
+			elan_info("[elan] reset gpio to resum tp\n");
+			set_int_pin_state(1);
+
+			if ((i2c_master_send(ts->client, cmd, sizeof(cmd))) != sizeof(cmd)) {
+				printk("[elan] %s: i2c_master_send failed\n", __func__);
+			} else {
+				printk("[elan] %s: i2c_master_send %x %x %x %x\n", __func__, cmd[0],
+				       cmd[1], cmd[2], cmd[3]);
+			}
+			msleep(2);
+			rc = i2c_master_send(ts->client, getcmd, sizeof(getcmd));
+			if (rc != sizeof(getcmd)) {
+				printk("[elan] %s: i2c_master_send getcmd failed\n", __func__);
+			} else {
+				printk("[elan] %s: send %x %x %x %x\n", __func__, getcmd[0],
+				       getcmd[1], getcmd[2], getcmd[3]);
+			}
+			rc = i2c_master_recv(ts->client, recvpwr, sizeof(recvpwr));
+			if (rc != sizeof(recvpwr)) {
+				printk("[elan] %s: i2c_master_recv recvpwr failed\n", __func__);
+			} else {
+				printk("[elan] %s: recv %x %x %x %x\n", __func__, recvpwr[0],
+				       recvpwr[1], recvpwr[2], recvpwr[3]);
+			}
+
+			if (recvpwr[1] != 0x58)
+				elan_reset();
+			elan_switch_irq(1);
+		}
 #ifdef ELAN_ESD_CHECK
-		    queue_delayed_work(esd_wq, &esd_work, delay);
+		queue_delayed_work(esd_wq, &esd_work, delay);
 #endif
-		}else{
+	} else {
 		elan_info("no need resume!\n");
-}
-mutex_unlock(&ts_pm_lock);
-    return rc;
+	}
+	mutex_unlock(&ts_pm_lock);
+	return rc;
 }
 #endif
 
